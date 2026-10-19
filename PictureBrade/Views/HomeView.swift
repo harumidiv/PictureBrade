@@ -9,6 +9,7 @@ import UIKit
 struct HomeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(GameCenterManager.self) private var gameCenter
     @State private var isAddingBlade = false
     @State private var battleMode: BattleGame.Mode?
     @State private var bladeToDelete: Blade?
@@ -61,6 +62,15 @@ struct HomeView: View {
                 .padding()
             }
             .background(Theme.background.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("ランキング", systemImage: "trophy.fill") {
+                        gameCenter.showEndlessLeaderboard()
+                    }
+                    .tint(Theme.gold)
+                    .disabled(!gameCenter.isAuthenticated)
+                }
+            }
             .sheet(isPresented: $isAddingBlade) {
                 AddBladeView()
             }

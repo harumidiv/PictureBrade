@@ -10,6 +10,8 @@ import UIKit
 struct BattleView: View {
     let game: BattleGame
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(RewardedAdManager.self) private var rewardedAds
+    @Environment(GameCenterManager.self) private var gameCenter
     @Environment(\.dismiss) private var dismiss
     /// ランダム連戦で勝利時に引いた次の相手（表示のたびに変わらないよう保持する）
     @State private var nextEnemy: Enemy?
@@ -40,6 +42,7 @@ struct BattleView: View {
                 enemies.markDefeated(bladeID: game.cpu.id)
             case .endless:
                 enemies.recordStreak(game.winStreak)
+                gameCenter.submitEndless(streak: game.winStreak)
                 nextEnemy = enemies.randomEnemy(level: EnemyCatalog.randomLevel(forStreak: game.winStreak))
             }
         }
@@ -181,13 +184,21 @@ struct BattleView: View {
                     title: "YOU LOSE…",
                     subtitle: "記録：\(game.streakBeforeLoss)連勝（最高 \(enemies.bestStreak)連勝）"
                 ) {
-                    HStack {
-                        Button("最初から") { challenge(enemies.randomEnemy(level: 1)) }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Theme.accent)
-                        Button("やめる") { dismiss() }
+                    VStack(spacing: 10) {
+                        if game.canContinue {
+                            continueButton
+                        }
+                        HStack {
+                            Button("最初から") {
+                                game.resetRun()
+                                challenge(enemies.randomEnemy(level: 1))
+                            }
                             .buttonStyle(.bordered)
                             .tint(.white)
+                            Button("やめる") { dismiss() }
+                                .buttonStyle(.bordered)
+                                .tint(.white)
+                        }
                     }
                 }
             } else {
@@ -271,6 +282,36 @@ struct BattleView: View {
                     .tint(.white)
             }
         }
+    }
+
+    /// 広告を最後まで見たら、連勝を引き継いで同じ相手に再挑戦
+    private var continueButton: some View {
+        Button {
+            rewardedAds.show { earned in
+                if earned { game.continueAfterLoss() }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if rewardedAds.isReady {
+                    Image(systemName: "play.rectangle.fill")
+                } else {
+                    ProgressView().tint(.white)
+                }
+                VStack(spacing: 0) {
+                    Text(rewardedAds.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
+                        .font(.headline)
+                    Text("\(game.streakBeforeLoss)連勝を引き継いで再挑戦（1回まで）")
+                        .font(.caption2)
+                        .opacity(0.85)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Theme.gold)
+        .foregroundStyle(.black)
+        .disabled(!rewardedAds.isReady)
+        .onAppear { rewardedAds.load() }
     }
 
     private func challenge(_ enemy: Enemy) {

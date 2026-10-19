@@ -79,6 +79,15 @@ final class BattleGame {
     private(set) var winStreak = 0
     /// 直前に負けたときの連勝記録
     private(set) var streakBeforeLoss = 0
+    /// この連戦で使ったコンティニューの回数（1回の連戦につき1回まで）
+    private(set) var continuesUsed = 0
+    static let maxContinues = 1
+
+    /// 引き継ぐ連勝があるときだけコンティニューできる（0連勝なら「最初から」と同じなので出さない）
+    var canContinue: Bool {
+        mode == .endless && phase == .matchOver(playerWon: false)
+            && continuesUsed < Self.maxContinues && streakBeforeLoss > 0
+    }
     private(set) var playerSpin: Float = 0
     private(set) var cpuSpin: Float = 0
     private(set) var rushProgress: Float = 1
@@ -223,6 +232,24 @@ final class BattleGame {
         cpuScore = 0
         round = 1
         resetRound()
+    }
+
+    /// ランダム連戦で負けたあと、連勝記録を引き継いで同じ相手に再挑戦する
+    func continueAfterLoss() {
+        guard canContinue else { return }
+        continuesUsed += 1
+        winStreak = streakBeforeLoss
+        playerScore = 0
+        cpuScore = 0
+        round = 1
+        resetRound()
+    }
+
+    /// ランダム連戦を最初からやり直す前に、連勝数とコンティニュー回数を戻す
+    func resetRun() {
+        winStreak = 0
+        streakBeforeLoss = 0
+        continuesUsed = 0
     }
 
     func restartMatch() {

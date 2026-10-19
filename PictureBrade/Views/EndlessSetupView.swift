@@ -10,6 +10,7 @@ import UIKit
 struct EndlessSetupView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(GameCenterManager.self) private var gameCenter
     @Environment(\.dismiss) private var dismiss
 
     @State private var playerBlade: Blade?
@@ -69,6 +70,16 @@ struct EndlessSetupView: View {
             Label("最高記録 \(enemies.bestStreak)連勝", systemImage: "trophy.fill")
                 .font(.headline)
                 .foregroundStyle(Theme.gold)
+            Button {
+                gameCenter.showEndlessLeaderboard()
+            } label: {
+                Label(gameCenter.isAuthenticated ? "Game Center ランキング" : "Game Center にサインインするとランキングに参加できます",
+                      systemImage: "list.number")
+                    .font(.subheadline)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
+            .disabled(!gameCenter.isAuthenticated)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)

@@ -4,5 +4,14 @@
 <dict>
 	<key>PexelsAPIKey</key>
 	<string>$(PEXELS_API_KEY)</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-8522231452310619~6274512653</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -51,6 +51,27 @@ nonisolated enum RandomCharacterPool {
         return latin + digits + ["★", "☆", "♠", "♣", "♥", "♦", "♪", "＠", "＆", "＃", "％", "※", "〒", "∞", "Ω"]
     }()
 
+    /// この端末で絵文字をカラーで描けるか。
+    /// 絵文字フォントが使えない環境（一部のシミュレーター等）では「?」入りの四角が描かれてしまうため、
+    /// 黄色い 😀 を試しに描いて、黄色い画素が出るかで判定する
+    static let canRenderEmoji: Bool = {
+        let size = CGSize(width: 32, height: 32)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            NSAttributedString(string: "😀", attributes: [.font: UIFont.systemFont(ofSize: 26)])
+                .draw(at: CGPoint(x: 1, y: 1))
+        }
+        guard let cgImage = image.cgImage,
+              let pixels = BladeAnalyzer.rgbaPixels(cgImage, width: 32, height: 32) else { return false }
+        var yellow = 0
+        for i in 0..<(32 * 32) {
+            let r = Int(pixels[i * 4]), g = Int(pixels[i * 4 + 1]), b = Int(pixels[i * 4 + 2])
+            if r > 180 && g > 140 && b < 100 { yellow += 1 }
+        }
+        return yellow > 20
+    }()
+
     /// ランダムに1文字選ぶ。表示できない文字（□になる文字）は引き直す
     static func random() -> (character: String, isEmoji: Bool) {
         while true {
@@ -58,7 +79,7 @@ nonisolated enum RandomCharacterPool {
             let (pool, isEmoji): ([String], Bool) = switch roll {
             case ..<0.45: (kanji, false)
             case ..<0.60: (kana, false)
-            case ..<0.90: (emoji, true)
+            case ..<0.90: (canRenderEmoji ? emoji : kanji, canRenderEmoji)
             default: (symbols, false)
             }
             guard let character = pool.randomElement() else { continue }

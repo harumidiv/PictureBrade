@@ -51,12 +51,22 @@ struct BattleView: View {
         HStack(alignment: .top) {
             spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan)
             VStack(spacing: 2) {
-                Text("ROUND \(game.round)")
-                    .font(.caption.bold())
-                Text("\(game.playerScore) - \(game.cpuScore)")
-                    .font(.system(size: 28, weight: .black, design: .rounded).monospacedDigit())
-                Text("\(BattleGame.winningScore)pt先取")
-                    .font(.caption2)
+                switch game.mode {
+                case .story:
+                    Text("ROUND \(game.round)")
+                        .font(.caption.bold())
+                    Text("\(game.playerScore) - \(game.cpuScore)")
+                        .font(.system(size: 28, weight: .black, design: .rounded).monospacedDigit())
+                    Text("\(game.winningScore)pt先取")
+                        .font(.caption2)
+                case .endless:
+                    Text("\(game.winStreak + 1)戦目")
+                        .font(.caption.bold())
+                    Text("\(game.winStreak)")
+                        .font(.system(size: 28, weight: .black, design: .rounded).monospacedDigit())
+                    Text("連勝中・一本勝負")
+                        .font(.caption2)
+                }
             }
             .foregroundStyle(.white)
             .frame(width: 90)
@@ -229,16 +239,28 @@ struct BattleView: View {
         }
     }
 
-    /// ランダム連戦：勝利時に引いた次の相手と連戦する（何の文字かは出てくるまで秘密）
+    /// ランダム連戦：勝利時に引いた次の相手を見せて連戦する
     private var endlessVictoryPanel: some View {
         let streak = game.winStreak >= 2 ? "  \(game.winStreak)連勝中！" : ""
         return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！\(streak)") {
             VStack(spacing: 10) {
                 if let nextEnemy {
+                    let blade = enemies.blade(for: nextEnemy)
+                    HStack(spacing: 12) {
+                        BladeBadge(image: enemies.image(for: nextEnemy), tint: blade.tint.color, size: 64, spinning: true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("次の相手")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.7))
+                            Text("\(blade.name)  Lv.\(nextEnemy.level)")
+                                .font(.title3.bold())
+                                .foregroundStyle(.white)
+                        }
+                    }
                     Button {
                         challenge(nextEnemy)
                     } label: {
-                        Text("次の相手（Lv.\(nextEnemy.level)）に挑む")
+                        Text("\(blade.name)に挑む")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -280,6 +302,7 @@ struct BattleView: View {
         switch result {
         case .playerWins(let finish), .cpuWins(let finish): finish.title
         case .draw: "DRAW"
+        case .doubleOver: "DOUBLE OVER!"
         }
     }
 
@@ -288,6 +311,7 @@ struct BattleView: View {
         case .playerWins(let finish): "\(game.player.name) が \(finish.points)pt 獲得！"
         case .cpuWins(let finish): "\(game.cpu.name) が \(finish.points)pt 獲得…"
         case .draw: "引き分け"
+        case .doubleOver: "両者場外で引き分け"
         }
     }
 

@@ -34,6 +34,8 @@ final class BattleGame {
         case playerWins(Finish)
         case cpuWins(Finish)
         case draw
+        /// 両者とも場外に飛んだ引き分け
+        case doubleOver
     }
 
     enum Phase: Equatable {
@@ -53,7 +55,13 @@ final class BattleGame {
         var id: Self { self }
     }
 
-    static let winningScore = 3
+    /// 試合に勝つのに必要なポイント（ランダム連戦は1ラウンド勝負）
+    var winningScore: Int {
+        switch mode {
+        case .story: 3
+        case .endless: 1
+        }
+    }
     static let maxDragDistance: CGFloat = 160
 
     let player: Blade
@@ -317,16 +325,20 @@ final class BattleGame {
             finishDelay = 1.2
             haptics.impactOccurred(intensity: 1)
         }
+        // 結果発表までの間に、もう一方も場外へ飛んだら両者場外で引き分け
+        if tops[Self.playerIndex].status == .out && tops[Self.cpuIndex].status == .out {
+            pendingResult = .doubleOver
+        }
         finishDelay -= dt
         guard finishDelay <= 0, let result = pendingResult else { return }
 
         switch result {
         case .playerWins(let finish): playerScore += finish.points
         case .cpuWins(let finish): cpuScore += finish.points
-        case .draw: break
+        case .draw, .doubleOver: break
         }
-        if playerScore >= Self.winningScore || cpuScore >= Self.winningScore {
-            let playerWon = playerScore >= Self.winningScore
+        if playerScore >= winningScore || cpuScore >= winningScore {
+            let playerWon = playerScore >= winningScore
             if !playerWon { streakBeforeLoss = winStreak }
             winStreak = playerWon ? winStreak + 1 : 0
             phase = .matchOver(playerWon: playerWon)

@@ -66,6 +66,8 @@ struct StoryView: View {
                 }
             }
             .onAppear {
+                // プロローグの挿絵に自分のコマを使うため、先に選んでおく
+                playerBlade = playerBlade ?? store.allBlades.first
                 if !enemies.hasSeenPrologue {
                     dialogue = prologueDialogue
                     enemies.markPrologueSeen()
@@ -170,16 +172,35 @@ struct StoryView: View {
 
     // MARK: - 会話
 
+    private var playerImage: UIImage? {
+        playerBlade.flatMap(store.image(for:))
+    }
+
     private var prologueDialogue: StoryDialogue {
+        let illustrations: [StoryIllustration] = [
+            .dictionaryBurst,
+            .cityRampage,
+            .photoBlade(playerImage),
+            .faceOff(playerImage),
+        ]
         let lines = Story.prologue.enumerated().map { index, text in
-            DialogueLine(heading: index == 0 ? "プロローグ" : nil, text: text)
+            DialogueLine(
+                heading: index == 0 ? "プロローグ" : nil,
+                text: text,
+                illustration: illustrations.indices.contains(index) ? illustrations[index] : nil
+            )
         }
         return StoryDialogue(lines: lines, finishTitle: "はじめる")
     }
 
     private var endingDialogue: StoryDialogue {
         let lines = Story.ending.enumerated().map { index, text in
-            DialogueLine(heading: index == 0 ? "エンディング" : nil, text: text)
+            DialogueLine(
+                heading: index == 0 ? "エンディング" : nil,
+                text: text,
+                // 「文字たちは辞書の中へ帰っていく」の場面
+                illustration: index == 1 ? .returnToDictionary : nil
+            )
         }
         return StoryDialogue(lines: lines, finishTitle: "おわり")
     }

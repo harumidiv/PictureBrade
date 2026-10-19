@@ -16,6 +16,8 @@ struct DialogueLine {
     /// 登場する相手のコマ（このセリフから姿を見せる）
     var portrait: UIImage?
     var portraitTint: Color = .gray
+    /// 場面の挿絵
+    var illustration: StoryIllustration?
 }
 
 /// ストーリー画面で表示する一連の会話
@@ -55,7 +57,11 @@ struct DialogueView: View {
                         .multilineTextAlignment(.center)
                         .transition(.opacity)
                 }
-                if let portrait = currentPortrait, let image = portrait.portrait {
+                if let illustration = line.illustration {
+                    StoryIllustrationView(illustration: illustration)
+                        .id(index)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                } else if let portrait = currentPortrait, let image = portrait.portrait {
                     BladeBadge(image: image, tint: portrait.portraitTint, size: 180, spinning: true)
                         .scaleEffect(portraitScale)
                         .shadow(color: portrait.portraitTint.opacity(0.8), radius: 30)

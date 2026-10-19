@@ -63,7 +63,7 @@ struct EndlessSetupView: View {
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
-            Text("5連勝ごとに相手が強くなる。負けたら終了")
+            Text("一本勝負！ 勝てば次の相手、負けたら即終了。\n5連勝ごとに相手が強くなる")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
             Label("最高記録 \(enemies.bestStreak)連勝", systemImage: "trophy.fill")

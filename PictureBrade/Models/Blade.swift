@@ -3,8 +3,10 @@
 //  PictureBrade
 //
 
-import SwiftUI
-import UIKit
+import Foundation
+
+// このファイルと BladeAnalyzer.swift は取り込みツール（tools/FetchStarterBlades）からも
+// コンパイルされるため、UIKit / SwiftUI に依存させないこと。
 
 /// コマの性能。各値は 0...1。
 nonisolated struct BladeStats: Codable, Hashable {
@@ -27,9 +29,14 @@ nonisolated struct RGBColor: Codable, Hashable {
     var red: Double
     var green: Double
     var blue: Double
+}
 
-    var color: Color { Color(red: red, green: green, blue: blue) }
-    var uiColor: UIColor { UIColor(red: red, green: green, blue: blue, alpha: 1) }
+/// 素材サイトから取得した写真のクレジット
+nonisolated struct PhotoCredit: Codable, Hashable {
+    var photographer: String
+    var photographerURL: URL
+    var photoURL: URL
+    var source: String
 }
 
 nonisolated struct Blade: Identifiable, Codable, Hashable {
@@ -39,4 +46,5 @@ nonisolated struct Blade: Identifiable, Codable, Hashable {
     var stats: BladeStats
     var tint: RGBColor
     var createdAt: Date
+    var credit: PhotoCredit?
 }

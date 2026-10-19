@@ -8,11 +8,18 @@ import Observation
 import UIKit
 
 /// 作成したコマを Documents/Blades に保存・読み込みする。
+/// あわせて、アプリに同梱されたファイター（StarterBlades）も提供する。
 @Observable
 final class BladeStore {
+    /// ユーザーが作成したコマ
     private(set) var blades: [Blade] = []
+    /// アプリ同梱のファイター（tools/FetchStarterBlades で生成）
+    let starterBlades: [Blade]
 
-    @ObservationIgnored private var imageCache: [UUID: UIImage] = [:]
+    var allBlades: [Blade] { blades + starterBlades }
+
+    /// 同梱ファイターを一覧で表示しても溜まり続けないよう NSCache を使う
+    @ObservationIgnored private let imageCache = NSCache<NSUUID, UIImage>()
     @ObservationIgnored private let directory: URL
     @ObservationIgnored private var indexURL: URL { directory.appendingPathComponent("blades.json") }
 
@@ -20,19 +27,23 @@ final class BladeStore {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         directory = documents.appendingPathComponent("Blades", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        starterBlades = Self.loadStarterBlades()
         load()
     }
 
     func image(for blade: Blade) -> UIImage? {
-        if let cached = imageCache[blade.id] { return cached }
-        let url = directory.appendingPathComponent(blade.imageFileName)
-        guard let image = UIImage(contentsOfFile: url.path) else { return nil }
-        imageCache[blade.id] = image
+        if let cached = imageCache.object(forKey: blade.id as NSUUID) { return cached }
+        let userFile = directory.appendingPathComponent(blade.imageFileName)
+        let bundledFile = Bundle.main.url(forResource: blade.imageFileName, withExtension: nil)
+        guard let image = UIImage(contentsOfFile: userFile.path) ?? bundledFile.flatMap({ UIImage(contentsOfFile: $0.path) }) else {
+            return nil
+        }
+        imageCache.setObject(image, forKey: blade.id as NSUUID)
         return image
     }
 
     @discardableResult
-    func add(name: String, image: UIImage) -> Blade? {
+    func add(name: String, image: UIImage, credit: PhotoCredit? = nil) -> Blade? {
         guard let data = image.pngData() else { return nil }
         let analysis = BladeImageProcessor.analyze(image)
         let id = UUID()
@@ -48,9 +59,10 @@ final class BladeStore {
             imageFileName: fileName,
             stats: analysis.stats,
             tint: analysis.tint,
-            createdAt: .now
+            createdAt: .now,
+            credit: credit
         )
-        imageCache[id] = image
+        imageCache.setObject(image, forKey: id as NSUUID)
         blades.insert(blade, at: 0)
         save()
         return blade
@@ -58,9 +70,16 @@ final class BladeStore {
 
     func delete(_ blade: Blade) {
         try? FileManager.default.removeItem(at: directory.appendingPathComponent(blade.imageFileName))
-        imageCache[blade.id] = nil
+        imageCache.removeObject(forKey: blade.id as NSUUID)
         blades.removeAll { $0.id == blade.id }
         save()
+    }
+
+    private static func loadStarterBlades() -> [Blade] {
+        guard let url = Bundle.main.url(forResource: "starter-blades", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([Blade].self, from: data) else { return [] }
+        return decoded
     }
 
     private func load() {

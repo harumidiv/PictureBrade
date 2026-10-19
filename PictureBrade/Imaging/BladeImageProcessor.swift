@@ -43,72 +43,74 @@ nonisolated enum BladeImageProcessor {
         }.value
     }
 
+    /// 文字から敵の「文字コマ」画像を作る（白い縁取り付き）
+    static func renderText(_ text: String, color: UIColor) -> UIImage {
+        render(text) { fontSize in
+            let base = UIFont.systemFont(ofSize: fontSize, weight: .black)
+            let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: fontSize) } ?? base
+            return [
+                .font: font,
+                .foregroundColor: color,
+                .strokeColor: UIColor.white,
+                .strokeWidth: -4.0,
+            ]
+        }
+    }
+
+    /// 絵文字のコマ画像を作る（縁取りや丸ゴシック指定をすると描けないため素のフォントで描く）
+    static func renderEmoji(_ emoji: String) -> UIImage {
+        render(emoji) { fontSize in
+            [.font: UIFont.systemFont(ofSize: fontSize)]
+        }
+    }
+
+    private static func render(_ text: String, attributes: (CGFloat) -> [NSAttributedString.Key: Any]) -> UIImage {
+        let size = CGSize(width: outputSize, height: outputSize)
+        func attributedString(fontSize: CGFloat) -> NSAttributedString {
+            NSAttributedString(string: text, attributes: attributes(fontSize))
+        }
+        // 枠に収まるまでフォントサイズを下げる
+        var fontSize: CGFloat = 420
+        var string = attributedString(fontSize: fontSize)
+        while fontSize > 40 {
+            let bounds = string.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil)
+            if bounds.width <= size.width * 0.92 && bounds.height <= size.height * 0.92 { break }
+            fontSize -= 20
+            string = attributedString(fontSize: fontSize)
+        }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let rendered = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            let bounds = string.boundingRect(with: size, options: [.usesLineFragmentOrigin], context: nil)
+            string.draw(at: CGPoint(x: (size.width - bounds.width) / 2, y: (size.height - bounds.height) / 2))
+        }
+        if let cgImage = rendered.cgImage, let trimmed = trimTransparentEdges(cgImage) {
+            return squareFit(trimmed)
+        }
+        return rendered
+    }
+
+    /// 描いた結果に見える部分があるか（フォントが無く何も描けなかった文字を弾く）
+    static func hasVisibleContent(_ image: UIImage) -> Bool {
+        let n = 32
+        guard let cgImage = image.cgImage, let pixels = BladeAnalyzer.rgbaPixels(cgImage, width: n, height: n) else { return false }
+        var visible = 0
+        for i in 0..<(n * n) where pixels[i * 4 + 3] > 128 { visible += 1 }
+        return visible > 8
+    }
+
     // MARK: - Analysis
 
-    /// 形と色からステータスを算出する。
-    /// - トゲトゲ（周長が長い）ほど攻撃力が高い
-    /// - 面積が大きい（ずんぐり）ほど防御力が高い
-    /// - 左右上下対称ほど持久力が高い
-    /// - 色が鮮やかなほど機動力が高い
     static func analyze(_ image: UIImage) -> Analysis {
-        let n = 64
-        guard let cg = image.cgImage, let pixels = rgbaPixels(cg, width: n, height: n) else {
-            return Analysis(stats: .balanced, tint: RGBColor(red: 0.5, green: 0.5, blue: 0.6))
+        guard let cgImage = image.cgImage else {
+            return Analysis(stats: .balanced, tint: BladeAnalyzer.defaultTint)
         }
-        var mask = [Bool](repeating: false, count: n * n)
-        var area = 0
-        var sumR = 0.0, sumG = 0.0, sumB = 0.0, sumSaturation = 0.0
-        for i in 0..<(n * n) {
-            let a = Double(pixels[i * 4 + 3]) / 255
-            guard a > 0.5 else { continue }
-            mask[i] = true
-            area += 1
-            // premultiplied なので alpha で割り戻す
-            let r = Double(pixels[i * 4]) / 255 / a
-            let g = Double(pixels[i * 4 + 1]) / 255 / a
-            let b = Double(pixels[i * 4 + 2]) / 255 / a
-            sumR += r; sumG += g; sumB += b
-            let maxC = max(r, g, b), minC = min(r, g, b)
-            sumSaturation += maxC > 0 ? (maxC - minC) / maxC : 0
-        }
-        guard area > 20 else {
-            return Analysis(stats: .balanced, tint: RGBColor(red: 0.5, green: 0.5, blue: 0.6))
-        }
-
-        var perimeter = 0
-        var mirrorMatches = 0
-        for y in 0..<n {
-            for x in 0..<n where mask[y * n + x] {
-                let neighbors = [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)]
-                if neighbors.contains(where: { $0.0 < 0 || $0.0 >= n || $0.1 < 0 || $0.1 >= n || !mask[$0.1 * n + $0.0] }) {
-                    perimeter += 1
-                }
-                if mask[y * n + (n - 1 - x)] { mirrorMatches += 1 }
-                if mask[(n - 1 - y) * n + x] { mirrorMatches += 1 }
-            }
-        }
-
-        let compactness = Double(perimeter) / Double(area).squareRoot()
-        let attack = clamp((compactness - 3.2) / 5.0)
-        let defense = clamp((Double(area) / Double(n * n) - 0.2) / 0.6)
-        let stamina = clamp((Double(mirrorMatches) / Double(area * 2) - 0.55) / 0.45)
-        let speed = clamp(sumSaturation / Double(area) / 0.7)
-
-        // 合計値を揃えて、どの画像でも極端に強くならないようにする
-        let raw = [attack, defense, stamina, speed].map { 0.25 + $0 }
-        let scale = 2.6 / raw.reduce(0, +)
-        let fair = raw.map { min(1.0, max(0.2, $0 * scale)) }
-
-        let tint = RGBColor(red: sumR / Double(area), green: sumG / Double(area), blue: sumB / Double(area))
-        return Analysis(
-            stats: BladeStats(attack: fair[0], defense: fair[1], stamina: fair[2], speed: fair[3]),
-            tint: tint
-        )
+        let result = BladeAnalyzer.analyze(cgImage)
+        return Analysis(stats: result.stats, tint: result.tint)
     }
 
     // MARK: - Helpers
-
-    private static func clamp(_ value: Double) -> Double { min(1, max(0, value)) }
 
     private static func redraw(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
         let longest = max(image.size.width, image.size.height)
@@ -122,27 +124,13 @@ nonisolated enum BladeImageProcessor {
         }
     }
 
-    private static func rgbaPixels(_ image: CGImage, width: Int, height: Int) -> [UInt8]? {
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        let ok = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return false }
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return true
-        }
-        return ok ? pixels : nil
-    }
-
     private static func hasTransparency(_ image: CGImage) -> Bool {
         switch image.alphaInfo {
         case .none, .noneSkipFirst, .noneSkipLast: return false
         default: break
         }
         let n = 64
-        guard let pixels = rgbaPixels(image, width: n, height: n) else { return false }
+        guard let pixels = BladeAnalyzer.rgbaPixels(image, width: n, height: n) else { return false }
         var transparent = 0
         for i in 0..<(n * n) where pixels[i * 4 + 3] < 128 { transparent += 1 }
         return Double(transparent) / Double(n * n) > 0.05
@@ -186,7 +174,7 @@ nonisolated enum BladeImageProcessor {
 
     private static func trimTransparentEdges(_ image: CGImage) -> CGImage? {
         let width = image.width, height = image.height
-        guard let pixels = rgbaPixels(image, width: width, height: height) else { return nil }
+        guard let pixels = BladeAnalyzer.rgbaPixels(image, width: width, height: height) else { return nil }
         var minX = width, minY = height, maxX = -1, maxY = -1
         for y in 0..<height {
             for x in 0..<width where pixels[(y * width + x) * 4 + 3] > 16 {

@@ -7,7 +7,7 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-/// iOSの切り抜き画像や写真からコマを作る
+/// iOSの切り抜き画像・写真・Pexels の人物写真からコマを作る
 struct AddBladeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -17,6 +17,8 @@ struct AddBladeView: View {
     @State private var name = ""
     @State private var isProcessing = false
     @State private var errorMessage: String?
+    @State private var credit: PhotoCredit?
+    @State private var isSearchingPexels = false
 
     private var analysis: BladeImageProcessor.Analysis? {
         preview.map(BladeImageProcessor.analyze)
@@ -30,6 +32,9 @@ struct AddBladeView: View {
                     if preview != nil {
                         TextField("コマの名前", text: $name)
                             .textFieldStyle(.roundedBorder)
+                    }
+                    if let credit {
+                        CreditLabel(credit: credit)
                     }
                     sources
                     howTo
@@ -46,7 +51,7 @@ struct AddBladeView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         if let preview {
-                            store.add(name: name, image: preview)
+                            store.add(name: name, image: preview, credit: credit)
                             dismiss()
                         }
                     }
@@ -59,6 +64,11 @@ struct AddBladeView: View {
                     let data = try? await item.loadTransferable(type: Data.self)
                     await process(data.flatMap(UIImage.init(data:)))
                     photoItem = nil
+                }
+            }
+            .sheet(isPresented: $isSearchingPexels) {
+                PexelsSearchView { photo in
+                    Task { await process(pexels: photo) }
                 }
             }
             .dropDestination(for: Data.self) { items, _ in
@@ -127,6 +137,16 @@ struct AddBladeView: View {
             .buttonStyle(.bordered)
             .tint(.white)
 
+            if PexelsClient.isConfigured {
+                Button {
+                    isSearchingPexels = true
+                } label: {
+                    Label("Pexelsで人物写真を探す", systemImage: "person.crop.rectangle.stack")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.gold)
+            }
         }
         .controlSize(.large)
     }
@@ -137,7 +157,7 @@ struct AddBladeView: View {
                 .font(.headline)
             Text("1. 写真アプリで被写体を長押し\n2. 「コピー」を選ぶ（またはそのままこの画面にドラッグ）\n3. 「コピーした切り抜きを貼り付け」をタップ")
                 .font(.footnote)
-            Text("形がトゲトゲ→攻撃、大きい→防御、左右対称→持久、色が鮮やか→機動 がアップ！")
+            Text("形がトゲトゲ→攻撃、大きい→防御、丸くて空気抵抗が少ない→持久、色が鮮やか→機動 がアップ！")
                 .font(.footnote)
                 .foregroundStyle(Theme.gold)
         }
@@ -147,7 +167,20 @@ struct AddBladeView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.06)))
     }
 
-    private func process(_ image: UIImage?) async {
+    private func process(pexels photo: PexelsPhoto) async {
+        isProcessing = true
+        errorMessage = nil
+        do {
+            let image = try await PexelsClient().downloadImage(for: photo)
+            await process(image, credit: photo.credit)
+        } catch {
+            isProcessing = false
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func process(_ image: UIImage?, credit newCredit: PhotoCredit? = nil) async {
+        credit = newCredit
         guard let image else {
             errorMessage = "画像が見つかりませんでした"
             return

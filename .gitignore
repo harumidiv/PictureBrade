@@ -1,0 +1,7 @@
+# APIキー
+Config/Secrets.xcconfig
+
+# Xcode
+xcuserdata/
+DerivedData/
+.DS_Store

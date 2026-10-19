@@ -147,7 +147,7 @@ enum SceneBuilder {
         tipMaterial.baseColor = .init(tint: UIColor(white: 0.9, alpha: 1))
         tipMaterial.metallic = 1.0
         tipMaterial.roughness = 0.2
-        let tip = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.28), materials: [tipMaterial])
+        let tip = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [tipMaterial])
         tip.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
         tip.position.y = -tipHeight / 2
         spinner.addChild(tip)
@@ -157,12 +157,12 @@ enum SceneBuilder {
         discMaterial.baseColor = .init(tint: tint.uiColor)
         discMaterial.metallic = 0.7
         discMaterial.roughness = 0.3
-        let disc = ModelEntity(mesh: .generateCylinder(height: 0.02, radius: radius * 0.8), materials: [discMaterial])
+        let disc = ModelEntity(mesh: .generateCylinder(height: 0.02, radius: radius * 0.35), materials: [discMaterial])
         disc.position.y = 0.01
         spinner.addChild(disc)
 
         // メタルのリング
-        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.92), materials: [tipMaterial])
+        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.42), materials: [tipMaterial])
         ring.position.y = 0.004
         spinner.addChild(ring)
 
@@ -173,7 +173,7 @@ enum SceneBuilder {
             imageMaterial.color = .init(tint: .white, texture: .init(texture))
             imageMaterial.opacityThreshold = 0.1
             imageMaterial.faceCulling = .none
-            let size = radius * 2.3
+            let size = radius * 2.5
             let face = ModelEntity(mesh: .generatePlane(width: size, height: size), materials: [imageMaterial])
             face.orientation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
             face.position.y = 0.024

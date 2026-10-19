@@ -44,22 +44,37 @@ final class BattleGame {
         case matchOver(playerWon: Bool)
     }
 
+    enum Mode: Identifiable {
+        /// 25体の文字を順に倒す
+        case story
+        /// ランダムな文字・絵文字と連戦する
+        case endless
+
+        var id: Self { self }
+    }
+
     static let winningScore = 3
     static let maxDragDistance: CGFloat = 160
 
     let player: Blade
-    let cpu: Blade
+    private(set) var cpu: Blade
+    let playerImage: UIImage
+    private(set) var cpuImage: UIImage
+    /// CPU の腕前 0...1
+    private(set) var cpuSkill: Float
 
     private(set) var phase: Phase = .loading
     private(set) var playerScore = 0
     private(set) var cpuScore = 0
     private(set) var round = 1
+    /// 連勝数（負けると 0 に戻る）
+    private(set) var winStreak = 0
+    /// 直前に負けたときの連勝記録
+    private(set) var streakBeforeLoss = 0
     private(set) var playerSpin: Float = 0
     private(set) var cpuSpin: Float = 0
     private(set) var rushProgress: Float = 1
 
-    @ObservationIgnored private let playerImage: UIImage
-    @ObservationIgnored private let cpuImage: UIImage
     @ObservationIgnored private var tops: [TopState] = []
     @ObservationIgnored private var models: [BladeModel] = []
     @ObservationIgnored private let worldRoot = Entity()
@@ -81,11 +96,15 @@ final class BattleGame {
     private static let playerIndex = 0
     private static let cpuIndex = 1
 
-    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage) {
+    let mode: Mode
+
+    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story) {
+        self.mode = mode
         self.player = player
         self.cpu = cpu
         self.playerImage = playerImage
         self.cpuImage = cpuImage
+        self.cpuSkill = cpuSkill
     }
 
     // MARK: - Scene setup
@@ -140,9 +159,10 @@ final class BattleGame {
         tops[Self.playerIndex].velocity = direction * (0.6 + 2.2 * power)
         tops[Self.playerIndex].spin = 0.55 + 0.45 * power
 
-        // CPU は中央方向へランダムな角度で打ち出す
-        let cpuPower = Float.random(in: 0.7...1.0)
-        let cpuAngle = Float.random(in: -0.9...0.9)
+        // CPU は中央方向へランダムな角度で打ち出す。腕前が高いほど強く、まっすぐ狙う
+        let cpuPower = Float.random(in: (0.55 + 0.3 * cpuSkill)...(0.85 + 0.15 * cpuSkill))
+        let spread = 0.9 - 0.5 * cpuSkill
+        let cpuAngle = Float.random(in: -spread...spread)
         let toCenter = SIMD2<Float>(sin(cpuAngle), cos(cpuAngle))
         tops[Self.cpuIndex].velocity = toCenter * (0.6 + 2.2 * cpuPower)
         tops[Self.cpuIndex].spin = 0.55 + 0.45 * cpuPower
@@ -174,6 +194,26 @@ final class BattleGame {
     func nextRound() {
         guard case .roundOver = phase else { return }
         round += 1
+        resetRound()
+    }
+
+    /// 試合後、同じ自分のコマのまま次の相手と戦う（連戦・やり直し）
+    func challengeNext(cpu nextCPU: Blade, image: UIImage, skill: Float) async {
+        guard case .matchOver = phase else { return }
+        phase = .loading
+        cpu = nextCPU
+        cpuImage = image
+        cpuSkill = skill
+
+        models[Self.cpuIndex].root.removeFromParent()
+        let radius = TopState(stats: nextCPU.stats, position: Self.cpuStart).radius
+        let model = await SceneBuilder.makeBlade(image: image, tint: nextCPU.tint, radius: radius)
+        models[Self.cpuIndex] = model
+        worldRoot.addChild(model.root)
+
+        playerScore = 0
+        cpuScore = 0
+        round = 1
         resetRound()
     }
 
@@ -254,7 +294,7 @@ final class BattleGame {
         let cpuTop = tops[Self.cpuIndex]
         guard cpuTop.isActive, cpuTop.rushCooldown <= 0 else { return }
         // 攻撃型ほど積極的に突進する
-        let rushChancePerSecond = 0.2 + Float(cpu.stats.attack) * 0.6
+        let rushChancePerSecond = 0.1 + Float(cpu.stats.attack) * 0.4 + cpuSkill * 0.4
         if Float.random(in: 0...1) < rushChancePerSecond * dt {
             rush(from: Self.cpuIndex, to: Self.playerIndex)
         }
@@ -286,7 +326,10 @@ final class BattleGame {
         case .draw: break
         }
         if playerScore >= Self.winningScore || cpuScore >= Self.winningScore {
-            phase = .matchOver(playerWon: playerScore >= Self.winningScore)
+            let playerWon = playerScore >= Self.winningScore
+            if !playerWon { streakBeforeLoss = winStreak }
+            winStreak = playerWon ? winStreak + 1 : 0
+            phase = .matchOver(playerWon: playerWon)
         } else {
             phase = .roundOver(result)
         }
@@ -363,3 +406,4 @@ final class BattleGame {
         if abs(newRush - rushProgress) > 0.02 || (newRush >= 1 && rushProgress < 1) { rushProgress = newRush }
     }
 }
+extension BattleGame: Identifiable {}

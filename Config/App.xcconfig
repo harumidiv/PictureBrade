@@ -1,0 +1,4 @@
+// アプリ共通の設定。APIキーなどの秘密情報は Secrets.xcconfig（Git管理外）に書く。
+// Secrets.xcconfig.example をコピーして Secrets.xcconfig を作成してください。
+PEXELS_API_KEY =
+#include? "Secrets.xcconfig"

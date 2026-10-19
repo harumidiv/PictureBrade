@@ -8,8 +8,9 @@ import UIKit
 
 struct HomeView: View {
     @Environment(BladeStore.self) private var store
+    @Environment(EnemyCatalog.self) private var enemies
     @State private var isAddingBlade = false
-    @State private var isSettingUpBattle = false
+    @State private var battleMode: BattleGame.Mode?
     @State private var bladeToDelete: Blade?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
@@ -19,17 +20,11 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     header
-                    Button {
-                        isSettingUpBattle = true
-                    } label: {
-                        Label("バトル開始", systemImage: "bolt.fill")
-                            .font(.title2.bold())
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
+                    HStack(spacing: 12) {
+                        modeButton(.story, title: "ストーリー", subtitle: "撃破 \(enemies.defeated.count)/\(EnemyCatalog.enemies.count)", systemImage: "book.fill", tint: Theme.accent)
+                        modeButton(.endless, title: "ランダム連戦", subtitle: "最高 \(enemies.bestStreak)連勝", systemImage: "shuffle", tint: .purple)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent)
-                    .disabled(store.blades.isEmpty)
+                    .disabled(store.allBlades.isEmpty)
 
                     HStack {
                         Text("マイコマ（\(store.blades.count)）")
@@ -58,6 +53,10 @@ struct HomeView: View {
                                 }
                         }
                     }
+
+                    if !store.starterBlades.isEmpty {
+                        fighters
+                    }
                 }
                 .padding()
             }
@@ -65,8 +64,11 @@ struct HomeView: View {
             .sheet(isPresented: $isAddingBlade) {
                 AddBladeView()
             }
-            .fullScreenCover(isPresented: $isSettingUpBattle) {
-                BattleSetupView()
+            .fullScreenCover(item: $battleMode) { mode in
+                switch mode {
+                case .story: StoryView()
+                case .endless: EndlessSetupView()
+                }
             }
             .confirmationDialog(
                 "「\(bladeToDelete?.name ?? "")」を削除しますか？",
@@ -77,6 +79,53 @@ struct HomeView: View {
                     if let bladeToDelete { store.delete(bladeToDelete) }
                 }
             }
+        }
+    }
+
+    private func modeButton(_ mode: BattleGame.Mode, title: String, subtitle: String, systemImage: String, tint: Color) -> some View {
+        Button {
+            battleMode = mode
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.title)
+                Text(title)
+                    .font(.headline.bold())
+                Text(subtitle)
+                    .font(.caption)
+                    .opacity(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(tint)
+    }
+
+    /// アプリ同梱のファイター
+    private var fighters: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("ファイター（\(store.starterBlades.count)）")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                NavigationLink("すべて見る") {
+                    FighterListView()
+                }
+                .tint(Theme.gold)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(store.starterBlades.prefix(20)) { blade in
+                        BladeCard(blade: blade, image: store.image(for: blade))
+                            .frame(width: 150)
+                    }
+                }
+            }
+            Link("Photos provided by Pexels", destination: PexelsClient.homepage)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.6))
         }
     }
 
@@ -106,7 +155,7 @@ struct HomeView: View {
                 .font(.system(size: 40, weight: .black, design: .rounded))
                 .italic()
                 .foregroundStyle(LinearGradient(colors: [Theme.gold, Theme.accent], startPoint: .leading, endPoint: .trailing))
-            Text("切り抜いた写真がコマになる！")
+            Text("切り抜いた写真のコマで、文字を倒せ！")
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.7))
         }

@@ -5,11 +5,14 @@
 
 import RealityKit
 import SwiftUI
+import UIKit
 
 struct BattleView: View {
     let game: BattleGame
-    @Environment(BladeStore.self) private var store
+    @Environment(EnemyCatalog.self) private var enemies
     @Environment(\.dismiss) private var dismiss
+    /// ランダム連戦で勝利時に引いた次の相手（表示のたびに変わらないよう保持する）
+    @State private var nextEnemy: Enemy?
     @State private var drag: CGSize?
 
     var body: some View {
@@ -30,13 +33,23 @@ struct BattleView: View {
             overlayMessage
         }
         .statusBarHidden()
+        .onChange(of: game.phase) { _, phase in
+            guard phase == .matchOver(playerWon: true) else { return }
+            switch game.mode {
+            case .story:
+                enemies.markDefeated(bladeID: game.cpu.id)
+            case .endless:
+                enemies.recordStreak(game.winStreak)
+                nextEnemy = enemies.randomEnemy(level: EnemyCatalog.randomLevel(forStreak: game.winStreak))
+            }
+        }
     }
 
     // MARK: - HUD
 
     private var topBar: some View {
         HStack(alignment: .top) {
-            spinGauge(blade: game.player, spin: game.playerSpin, score: game.playerScore, color: .cyan)
+            spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan)
             VStack(spacing: 2) {
                 Text("ROUND \(game.round)")
                     .font(.caption.bold())
@@ -47,7 +60,7 @@ struct BattleView: View {
             }
             .foregroundStyle(.white)
             .frame(width: 90)
-            spinGauge(blade: game.cpu, spin: game.cpuSpin, score: game.cpuScore, color: Theme.accent)
+            spinGauge(blade: game.cpu, image: game.cpuImage, spin: game.cpuSpin, score: game.cpuScore, color: Theme.accent)
         }
         .overlay(alignment: .topLeading) {
             Button {
@@ -61,9 +74,9 @@ struct BattleView: View {
         }
     }
 
-    private func spinGauge(blade: Blade, spin: Float, score: Int, color: Color) -> some View {
+    private func spinGauge(blade: Blade, image: UIImage, spin: Float, score: Int, color: Color) -> some View {
         VStack(spacing: 4) {
-            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 44)
+            BladeBadge(image: image, tint: blade.tint.color, size: 44)
             Text(blade.name)
                 .font(.caption.bold())
                 .lineLimit(1)
@@ -151,18 +164,97 @@ struct BattleView: View {
                     .tint(Theme.accent)
             }
         case .matchOver(let playerWon):
-            resultPanel(title: playerWon ? "YOU WIN!" : "YOU LOSE…", subtitle: "\(game.playerScore) - \(game.cpuScore)") {
-                HStack {
-                    Button("もう一度") { game.restartMatch() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Theme.accent)
-                    Button("やめる") { dismiss() }
-                        .buttonStyle(.bordered)
-                        .tint(.white)
+            if playerWon {
+                victoryPanel
+            } else if game.mode == .endless {
+                resultPanel(
+                    title: "YOU LOSE…",
+                    subtitle: "記録：\(game.streakBeforeLoss)連勝（最高 \(enemies.bestStreak)連勝）"
+                ) {
+                    HStack {
+                        Button("最初から") { challenge(enemies.randomEnemy(level: 1)) }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Theme.accent)
+                        Button("やめる") { dismiss() }
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                    }
+                }
+            } else {
+                resultPanel(title: "YOU LOSE…", subtitle: "\(game.playerScore) - \(game.cpuScore)") {
+                    HStack {
+                        Button("もう一度") { game.restartMatch() }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Theme.accent)
+                        Button("やめる") { dismiss() }
+                            .buttonStyle(.bordered)
+                            .tint(.white)
+                    }
                 }
             }
         default:
             EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var victoryPanel: some View {
+        switch game.mode {
+        case .story: storyVictoryPanel
+        case .endless: endlessVictoryPanel
+        }
+    }
+
+    /// ストーリー：倒した相手の最後のひと言を出してストーリー画面へ戻る（次の相手はそこで登場する）
+    private var storyVictoryPanel: some View {
+        let defeatLine = EnemyCatalog.enemy(forBladeID: game.cpu.id)?.defeat ?? ""
+        return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！") {
+            VStack(spacing: 12) {
+                if !defeatLine.isEmpty {
+                    Text("\(game.cpu.name)「\(defeatLine)」")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button {
+                    dismiss()
+                } label: {
+                    Text("ストーリーを進める")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+            }
+        }
+    }
+
+    /// ランダム連戦：勝利時に引いた次の相手と連戦する（何の文字かは出てくるまで秘密）
+    private var endlessVictoryPanel: some View {
+        let streak = game.winStreak >= 2 ? "  \(game.winStreak)連勝中！" : ""
+        return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！\(streak)") {
+            VStack(spacing: 10) {
+                if let nextEnemy {
+                    Button {
+                        challenge(nextEnemy)
+                    } label: {
+                        Text("次の相手（Lv.\(nextEnemy.level)）に挑む")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
+                }
+                Button("やめる") { dismiss() }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+            }
+        }
+    }
+
+    private func challenge(_ enemy: Enemy) {
+        nextEnemy = nil
+        Task {
+            await game.challengeNext(cpu: enemies.blade(for: enemy), image: enemies.image(for: enemy), skill: enemy.skill)
         }
     }
 

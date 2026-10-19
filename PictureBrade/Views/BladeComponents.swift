@@ -106,6 +106,9 @@ struct BladeCard: View {
                 .background(Capsule().fill(Theme.accent.opacity(0.8)))
                 .foregroundStyle(.white)
             StatsView(stats: blade.stats)
+            if let credit = blade.credit {
+                CreditLabel(credit: credit)
+            }
         }
         .padding(12)
         .background(
@@ -116,5 +119,39 @@ struct BladeCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(isSelected ? Theme.gold : .clear, lineWidth: 3)
         )
+    }
+}
+
+/// バトルに使う自分のコマを選ぶ横スクロール
+struct PlayerBladePicker: View {
+    @Binding var selection: Blade?
+    @Environment(BladeStore.self) private var store
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("あなたのコマ")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(store.allBlades) { blade in
+                            BladeCard(blade: blade, image: store.image(for: blade), isSelected: selection?.id == blade.id)
+                                .frame(width: 150)
+                                .onTapGesture { selection = blade }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .onChange(of: selection?.id, initial: true) { _, id in
+                    guard let id else { return }
+                    withAnimation { proxy.scrollTo(id, anchor: .center) }
+                }
+            }
+        }
+        .onAppear {
+            selection = selection ?? store.allBlades.first
+        }
     }
 }

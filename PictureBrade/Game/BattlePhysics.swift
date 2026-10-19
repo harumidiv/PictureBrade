@@ -76,7 +76,9 @@ nonisolated enum BattlePhysics {
     static func step(_ tops: inout [TopState], dt: Float) -> [CollisionEvent] {
         var events: [CollisionEvent] = []
         for i in tops.indices {
-            integrate(&tops[i], dt: dt)
+            if let wallHit = integrate(&tops[i], dt: dt) {
+                events.append(wallHit)
+            }
         }
         for i in tops.indices {
             for j in tops.indices where j > i {
@@ -91,7 +93,8 @@ nonisolated enum BattlePhysics {
         return events
     }
 
-    private static func integrate(_ top: inout TopState, dt: Float) {
+    /// 1コマ分を進める。壁に強く当たったときはその衝突を返す
+    private static func integrate(_ top: inout TopState, dt: Float) -> CollisionEvent? {
         let speedStat = Float(top.stats.speed)
         let staminaStat = Float(top.stats.stamina)
         top.rushCooldown = max(0, top.rushCooldown - dt)
@@ -123,7 +126,7 @@ nonisolated enum BattlePhysics {
             if top.spin <= 0.06 {
                 top.status = .stopped
             }
-            resolveWall(&top)
+            return resolveWall(&top, dt: dt)
 
         case .stopped:
             top.velocity -= top.position * 1.2 * dt
@@ -140,12 +143,13 @@ nonisolated enum BattlePhysics {
             top.angle += 20 * top.spin * dt
             top.tilt += (1.3 - top.tilt) * min(1, dt * 2)
         }
+        return nil
     }
 
-    private static func resolveWall(_ top: inout TopState) {
+    private static func resolveWall(_ top: inout TopState, dt: Float) -> CollisionEvent? {
         let r = simd_length(top.position)
         let limit = StadiumGeometry.radius - top.radius
-        guard r > limit else { return }
+        guard r > limit else { return nil }
         let normal = top.position / r
         let radialSpeed = simd_dot(top.velocity, normal)
         let overThreshold: Float = 2.6 + Float(top.stats.defense) * 1.0
@@ -155,13 +159,25 @@ nonisolated enum BattlePhysics {
             top.height = StadiumGeometry.height(at: StadiumGeometry.radius)
             top.verticalVelocity = 0.8 + radialSpeed * 0.4
             top.velocity += normal * 0.4
-            return
+            return nil
         }
         top.position = normal * limit
-        if radialSpeed > 0 {
-            top.velocity -= normal * radialSpeed * 1.5
-            top.spin = max(0, top.spin - radialSpeed * 0.012)
-        }
+        // 重い（防御の高い）コマほど衝撃や摩擦の影響を受けにくい
+        let vulnerability = 1.3 - 0.6 * Float(top.stats.defense)
+
+        // 壁との擦れ：触れている間ずっと、縁が擦れて回転が奪われ、滑りも遅くなる
+        let tangentialVelocity = top.velocity - normal * radialSpeed
+        let scrapeSpeed = simd_length(tangentialVelocity)
+        top.spin = max(0, top.spin - (0.08 + 0.06 * scrapeSpeed) * vulnerability * dt)
+        top.velocity -= tangentialVelocity * min(1, 1.5 * dt)
+
+        guard radialSpeed > 0 else { return nil }
+        // 壁への衝突：ぶつかる勢いが強いほど回転を大きく失う
+        top.velocity -= normal * radialSpeed * 1.5
+        let impactLoss = (0.01 + 0.05 * radialSpeed) * vulnerability
+        top.spin = max(0, top.spin - impactLoss)
+        guard radialSpeed > 0.4 else { return nil }
+        return CollisionEvent(point: normal * StadiumGeometry.radius, strength: radialSpeed)
     }
 
     private static func collide(_ a: inout TopState, _ b: inout TopState) -> CollisionEvent? {

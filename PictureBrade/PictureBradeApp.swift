@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct PictureBradeApp: App {
+    @State private var store = BladeStore()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
+                .environment(store)
+                .preferredColorScheme(.dark)
         }
     }
 }

@@ -9,9 +9,9 @@ import Observation
 /// ストーリーのライフ。負けるたびに1つ減り、時間がたつと1つずつ回復する。広告を見ると全回復する
 @Observable
 final class LifeManager {
-    static let maxLives = 5
+    static let maxLives = 3
     /// 1つ回復するまでの時間
-    static let recoveryInterval: TimeInterval = 20 * 60
+    static let recoveryInterval: TimeInterval = 60 * 60
 
     private static let livesKey = "storyLives"
     private static let nextRecoveryKey = "storyLivesNextRecovery"
@@ -23,7 +23,8 @@ final class LifeManager {
 
     init() {
         let defaults = UserDefaults.standard
-        storedLives = defaults.object(forKey: Self.livesKey) as? Int ?? Self.maxLives
+        // 最大数を減らしたときに、前に保存した多いライフが残らないようにする
+        storedLives = min(defaults.object(forKey: Self.livesKey) as? Int ?? Self.maxLives, Self.maxLives)
         nextRecovery = defaults.object(forKey: Self.nextRecoveryKey) as? Date
     }
 

@@ -38,8 +38,8 @@ final class ImpactSound {
 
     private func startIfNeeded() -> Bool {
         if !isConfigured {
-            // マナーモードでは鳴らさず、ほかのアプリの音楽とも混ぜて鳴らす
-            try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+            // マナーモード（消音スイッチ）中でも鳴らす。ほかのアプリの音楽は止めずに混ぜて鳴らす
+            try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
             try? AVAudioSession.sharedInstance().setActive(true)
             for _ in 0..<6 {
                 let player = AVAudioPlayerNode()

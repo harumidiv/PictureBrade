@@ -517,6 +517,8 @@ private struct BladeCollectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isAddingBlade = false
     @State private var bladeToDelete: Blade?
+    /// 削除ボタンを出しているか
+    @State private var isEditing = false
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
@@ -546,12 +548,33 @@ private struct BladeCollectionView: View {
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(store.blades) { blade in
                             BladeCard(blade: blade, image: store.image(for: blade))
+                                .overlay(alignment: .topTrailing) {
+                                    if isEditing {
+                                        Button {
+                                            bladeToDelete = blade
+                                        } label: {
+                                            Image(systemName: "trash.circle.fill")
+                                                .font(.system(size: 34))
+                                                .symbolRenderingMode(.palette)
+                                                .foregroundStyle(.white, .red)
+                                                .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
+                                        }
+                                        .accessibilityLabel("「\(blade.name)」を削除")
+                                        .offset(x: 8, y: -8)
+                                        .transition(.scale.combined(with: .opacity))
+                                    }
+                                }
                                 .contextMenu {
                                     Button("削除", systemImage: "trash", role: .destructive) {
                                         bladeToDelete = blade
                                     }
                                 }
                         }
+                    }
+                    if !store.blades.isEmpty {
+                        Text(isEditing ? "ゴミ箱ボタンで削除できます" : "右上の「編集」か、コマの長押しで削除できます")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
                     }
                     if !store.starterBlades.isEmpty {
                         NavigationLink("ファイターを見る（\(store.starterBlades.count)）") {
@@ -573,18 +596,34 @@ private struct BladeCollectionView: View {
                     Button("コマを作る", systemImage: "plus.circle.fill") { isAddingBlade = true }
                         .tint(Theme.gold)
                 }
+                if !store.blades.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(isEditing ? "完了" : "編集") {
+                            withAnimation(.spring(duration: 0.3)) { isEditing.toggle() }
+                        }
+                        .fontWeight(isEditing ? .bold : .regular)
+                    }
+                }
             }
             .sheet(isPresented: $isAddingBlade) {
                 AddBladeView()
             }
-            .confirmationDialog(
+            .alert(
                 "「\(bladeToDelete?.name ?? "")」を削除しますか？",
-                isPresented: Binding(get: { bladeToDelete != nil }, set: { if !$0 { bladeToDelete = nil } }),
-                titleVisibility: .visible
+                isPresented: Binding(get: { bladeToDelete != nil }, set: { if !$0 { bladeToDelete = nil } })
             ) {
+                Button("キャンセル", role: .cancel) {}
                 Button("削除", role: .destructive) {
-                    if let bladeToDelete { store.delete(bladeToDelete) }
+                    if let bladeToDelete {
+                        withAnimation { store.delete(bladeToDelete) }
+                    }
                 }
+            } message: {
+                Text("削除したコマは元に戻せません")
+            }
+            // 全部消したら編集モードを終える
+            .onChange(of: store.blades.isEmpty) { _, isEmpty in
+                if isEmpty { isEditing = false }
             }
         }
     }

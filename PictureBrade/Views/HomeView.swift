@@ -27,18 +27,14 @@ struct HomeView: View {
         NavigationStack {
             ZStack {
                 HomeBackground()
-                VStack(spacing: 0) {
-                    HomeLogo()
-                        .padding(.top, 12)
-                    Spacer(minLength: 8)
-                    HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
-                    Spacer(minLength: 8)
-                    modeButtons
-                    dock
-                        .padding(.top, 18)
+                // iPhone の縦画面を基準に作ってあるので、iPad など広い画面ではその比率のまま拡大する
+                GeometryReader { proxy in
+                    let scale = max(1, min(proxy.size.width / Self.designWidth, proxy.size.height / Self.designHeight))
+                    content
+                        .frame(width: proxy.size.width / scale, height: proxy.size.height / scale)
+                        .scaleEffect(scale)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $isAddingBlade) {
@@ -54,6 +50,25 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// レイアウトの基準にする画面の大きさ（iPhone の縦画面）
+    private static let designWidth: CGFloat = 430
+    private static let designHeight: CGFloat = 820
+
+    private var content: some View {
+        VStack(spacing: 0) {
+            HomeLogo()
+                .padding(.top, 12)
+            Spacer(minLength: 8)
+            HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
+            Spacer(minLength: 8)
+            modeButtons
+            dock
+                .padding(.top, 18)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     private func cycleHeroBlade() {

@@ -100,6 +100,8 @@ final class BattleGame {
     @ObservationIgnored private let camera = PerspectiveCamera()
     @ObservationIgnored private let cameraBase: SIMD3<Float> = [0, 3.0, 2.4]
     @ObservationIgnored private var cameraShake: Float = 0
+    /// 画面の横 ÷ 縦（最初は iPhone の縦画面くらいにしておく）
+    @ObservationIgnored private var viewportAspect: Float = 0.46
     @ObservationIgnored private var sparks: [(entity: ModelEntity, age: Float)] = []
     @ObservationIgnored private var sparkStreaks: [SparkStreak] = []
     /// ポケットが回った角度。ステージ外に出られる場所がゆっくり移動していく
@@ -144,11 +146,28 @@ final class BattleGame {
 
     // MARK: - Scene setup
 
+    /// 画面の縦横比に合わせて画角を決める。
+    /// 横は iPhone の縦画面と同じだけ見え（スタジアムが横いっぱいに収まる）、縦も最低限は見えるようにする。
+    /// iPhone では縦 60° のまま、iPad では横幅が広いぶんスタジアムが大きく映る
+    func updateViewport(size: CGSize) {
+        guard size.width > 0, size.height > 0 else { return }
+        viewportAspect = Float(size.width / size.height)
+        applyFieldOfView()
+    }
+
+    private func applyFieldOfView() {
+        let aspect = viewportAspect
+        let horizontalHalf: Float = 15 * .pi / 180
+        let verticalFromWidth = 2 * atan(tan(horizontalHalf) / aspect) * 180 / .pi
+        camera.camera.fieldOfViewOrientation = .vertical
+        camera.camera.fieldOfViewInDegrees = max(verticalFromWidth, 48)
+    }
+
     func setUp(content: inout RealityViewCameraContent) async {
         content.camera = .virtual
         content.add(worldRoot)
 
-        camera.camera.fieldOfViewInDegrees = 60
+        applyFieldOfView()
         camera.look(at: [0, 0, 0.1], from: cameraBase, relativeTo: nil)
         worldRoot.addChild(camera)
 

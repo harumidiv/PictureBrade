@@ -28,6 +28,15 @@ struct BattleView: View {
                 await game.setUp(content: &content)
             }
             .ignoresSafeArea()
+            // 3D は画面全体に描かれるので、セーフエリアも含めた大きさで画角を決める
+            .onGeometryChange(for: CGSize.self) { proxy in
+                CGSize(
+                    width: proxy.size.width + proxy.safeAreaInsets.leading + proxy.safeAreaInsets.trailing,
+                    height: proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
+                )
+            } action: { size in
+                game.updateViewport(size: size)
+            }
 
             inputLayer
             VStack {

@@ -72,6 +72,8 @@ final class BattleGame {
     private(set) var cpuSkill: Float
 
     private(set) var phase: Phase = .loading
+    /// この試合で一度でもシュートしたか（途中でやめたときにライフを減らすかの判定に使う）
+    private(set) var hasLaunched = false
     private(set) var playerScore = 0
     private(set) var cpuScore = 0
 
@@ -225,6 +227,7 @@ final class BattleGame {
         tops[Self.cpuIndex].spin = 0.55 + 0.45 * cpuPower
 
         phase = .battle
+        hasLaunched = true
         haptics.impactOccurred(intensity: CGFloat(power))
     }
 
@@ -271,6 +274,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 
@@ -282,6 +286,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 
@@ -296,6 +301,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 

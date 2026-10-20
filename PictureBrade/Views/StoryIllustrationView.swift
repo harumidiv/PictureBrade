@@ -46,6 +46,8 @@ struct StoryIllustrationView: View {
                 case .faceOff(let image): FaceOffScene(time: time, image: image)
                 }
             }
+            // 影やぼかしの多い絵を毎フレーム1枚にまとめて GPU で描き、メインスレッドの負担を減らす
+            .drawingGroup()
         }
         .frame(height: 300)
         .clipShape(RoundedRectangle(cornerRadius: 24))
@@ -155,11 +157,13 @@ private struct DictionaryScene<Source: View>: View {
                     let direction = Double(index % 2 == 0 ? 1 : -1) * (0.3 + Double(index) / 14)
                     let x = bookCenter.x + CGFloat(direction * t) * size.width * 0.55
                     let y = bookCenter.y - 20 - CGFloat(sin(.pi * min(t * 1.1, 1)) * 0.75 + t * 0.15) * size.height * 0.75
+                    // 文字の大きさは毎フレーム変えず、拡大縮小で見せる（フォントの作り直しを避ける）
                     Text(character)
-                        .font(.system(size: 22 + 34 * t, weight: .black, design: .rounded))
+                        .font(.system(size: 56, weight: .black, design: .rounded))
                         .foregroundStyle(color)
                         .shadow(color: .white, radius: 1)
                         .shadow(color: color, radius: 10)
+                        .scaleEffect((22 + 34 * t) / 56)
                         .rotationEffect(.radians(t * 6 * direction))
                         .position(x: x, y: y)
                         .opacity(t < 0.08 ? t / 0.08 : (t > 0.85 ? (1 - t) / 0.15 : 1))
@@ -306,7 +310,8 @@ private struct UFOScene: View {
         let y = ufo.y + 20 + (groundY - ufo.y - 40) * CGFloat(t)
         let opacity = t < 0.08 ? t / 0.08 : (t > 0.88 ? (1 - t) / 0.12 : 1)
         return Text(characters[index].0)
-            .font(.system(size: 18 + 26 * t))
+            .font(.system(size: 44))
+            .scaleEffect((18 + 26 * t) / 44)
             .rotationEffect(.radians(t * 5 * spread))
             .position(x: x, y: y)
             .opacity(opacity)
@@ -367,7 +372,8 @@ private struct Sparkles: View {
             let y = (cos(seed * 1.7) * 0.5 + 0.5) * area.height * 0.7
             let twinkle = (sin(time * 4 + seed) + 1) / 2
             Image(systemName: "sparkle")
-                .font(.system(size: 8 + 8 * twinkle))
+                .font(.system(size: 16))
+                .scaleEffect((8 + 8 * twinkle) / 16)
                 .foregroundStyle(.white.opacity(0.3 + 0.6 * twinkle))
                 .position(x: x, y: y)
         }

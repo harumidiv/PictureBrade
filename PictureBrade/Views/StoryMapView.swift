@@ -36,11 +36,17 @@ struct StoryMapView: View {
                 .frame(width: layout.width, height: layout.height)
             }
             .scrollPosition($scrollPosition)
+            // 開いた瞬間から、いま挑む場所が見える位置で表示する（上のゴールから始まらないように）
+            .defaultScrollAnchor(initialAnchor(layout, viewport: proxy.size.height), for: .initialOffset)
             .onChange(of: proxy.size, initial: true) { _, size in
                 // 表示直後は大きさが決まっていないことがあるので、決まってから1回だけスクロールする
                 guard !didInitialScroll, size.width > 100, size.height > 100 else { return }
                 didInitialScroll = true
-                scrollToCurrent(layout, viewport: size.height, animated: false)
+                // 画面を開くアニメーションの途中だとスクロールが効かないことがあるので、少し待ってからも合わせる
+                Task {
+                    try? await Task.sleep(for: .seconds(0.35))
+                    scrollToCurrent(layout, viewport: size.height, animated: false)
+                }
             }
             .onChange(of: enemies.nextStoryEnemy(in: story)) {
                 scrollToCurrent(layout, viewport: proxy.size.height, animated: true)
@@ -73,13 +79,25 @@ struct StoryMapView: View {
 
     /// いま挑む場所が画面の真ん中に来るようにスクロールする
     private func scrollToCurrent(_ layout: StoryMapLayout, viewport: CGFloat, animated: Bool) {
-        let point = layout.route[currentRouteIndex(layout)]
-        let y = min(max(point.y - viewport / 2, 0), max(layout.height - viewport, 0))
+        let y = currentOffset(layout, viewport: viewport)
         if animated {
             withAnimation { scrollPosition.scrollTo(y: y) }
         } else {
             scrollPosition.scrollTo(y: y)
         }
+    }
+
+    /// いま挑む場所が画面の真ん中に来るスクロール量
+    private func currentOffset(_ layout: StoryMapLayout, viewport: CGFloat) -> CGFloat {
+        let point = layout.route[currentRouteIndex(layout)]
+        return min(max(point.y - viewport / 2, 0), max(layout.height - viewport, 0))
+    }
+
+    /// 最初に表示する位置（0 が一番上、1 が一番下）
+    private func initialAnchor(_ layout: StoryMapLayout, viewport: CGFloat) -> UnitPoint {
+        let scrollable = layout.height - viewport
+        guard scrollable > 0 else { return .top }
+        return UnitPoint(x: 0.5, y: currentOffset(layout, viewport: viewport) / scrollable)
     }
 
     // MARK: - 地形

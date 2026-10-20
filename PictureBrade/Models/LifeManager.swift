@@ -6,7 +6,7 @@
 import Foundation
 import Observation
 
-/// ストーリーのライフ。負けるたびに1つ減り、時間がたつと1つずつ回復する。広告を見ると全回復する
+/// ストーリーのライフ。負けるたびに1つ減り、時間がたつと1つずつ回復する。広告を見ると1つ回復する
 @Observable
 final class LifeManager {
     static let maxLives = 3
@@ -56,10 +56,14 @@ final class LifeManager {
         save()
     }
 
-    /// 広告を見たときに全回復する
-    func refill() {
-        storedLives = Self.maxLives
-        nextRecovery = nil
+    /// 広告を見たときに1つ回復する。時間による回復のカウントダウンはそのまま続く
+    func recoverOne(at now: Date = .now) {
+        normalize(at: now)
+        guard storedLives < Self.maxLives else { return }
+        storedLives += 1
+        if storedLives == Self.maxLives {
+            nextRecovery = nil
+        }
         save()
     }
 

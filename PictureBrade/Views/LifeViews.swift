@@ -35,7 +35,7 @@ struct LifeIndicator: View {
     }
 }
 
-/// 広告を見てライフを全回復するボタン
+/// 広告を見てライフを1つ回復するボタン
 struct LifeRefillButton: View {
     @Environment(LifeManager.self) private var life
     @Environment(RewardedAdManager.self) private var rewardedAds
@@ -43,7 +43,7 @@ struct LifeRefillButton: View {
     var body: some View {
         Button {
             rewardedAds.show { earned in
-                if earned { life.refill() }
+                if earned { life.recoverOne() }
             }
         } label: {
             HStack(spacing: 8) {
@@ -52,7 +52,7 @@ struct LifeRefillButton: View {
                 } else {
                     ProgressView().tint(.white)
                 }
-                Text("広告を見てライフを全回復")
+                Text("広告を見てライフを1つ回復")
                     .font(.headline)
             }
             .frame(maxWidth: .infinity)

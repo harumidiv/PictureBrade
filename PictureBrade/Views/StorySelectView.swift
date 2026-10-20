@@ -26,7 +26,8 @@ struct StorySelectView: View {
                             StoryCard(
                                 story: story,
                                 defeated: enemies.defeatedCount(in: story),
-                                isCleared: enemies.isStoryCleared(story)
+                                isCleared: enemies.isStoryCleared(story),
+                                stars: enemies.totalStars(in: story)
                             )
                         }
                         .buttonStyle(.plain)
@@ -56,6 +57,7 @@ private struct StoryCard: View {
     let story: StoryKind
     let defeated: Int
     let isCleared: Bool
+    let stars: Int
 
     private var total: Int { story.enemies.count }
 
@@ -93,6 +95,10 @@ private struct StoryCard: View {
                 Text("撃破 \(defeated)/\(total)")
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(.white)
+                Label("\(stars)/\(total * 3)", systemImage: "star.fill")
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(Theme.gold)
+                    .labelStyle(StarCountLabelStyle())
                 Image(systemName: "chevron.right")
                     .font(.caption.bold())
                     .foregroundStyle(.white.opacity(0.7))
@@ -106,6 +112,16 @@ private struct StoryCard: View {
         .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.35), lineWidth: 2))
         .shadow(color: colors[0].opacity(0.5), radius: 10, y: 4)
         .contentShape(RoundedRectangle(cornerRadius: 22))
+    }
+}
+
+/// 星のアイコンと数字を詰めて並べる
+private struct StarCountLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 2) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 

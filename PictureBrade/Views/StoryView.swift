@@ -158,12 +158,16 @@ struct StoryView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text(isDefeated ? "CLEAR" : "NEXT")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(isDefeated ? .white : .black)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(isDefeated ? Color.green : Theme.gold))
+                if isDefeated {
+                    StarRating(stars: enemies.stars(for: stage), size: 22)
+                } else {
+                    Text("NEXT")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Theme.gold))
+                }
             } else {
                 Text(story.clearedTitle)
                     .font(.title3.weight(.black))

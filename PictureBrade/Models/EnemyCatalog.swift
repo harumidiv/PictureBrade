@@ -131,9 +131,12 @@ final class EnemyCatalog {
     ]
 
     private static let defeatedKey = "defeatedEnemies"
+    private static let starsKey = "storyStars"
     private static let bestStreakKey = "randomBestStreak"
 
     private(set) var defeated: Set<String>
+    /// ステージごとの一番よかった星（1...3）
+    private(set) var bestStars: [String: Int]
     /// ランダム連戦の最高連勝数
     private(set) var bestStreak: Int
 
@@ -141,6 +144,7 @@ final class EnemyCatalog {
 
     init() {
         defeated = Set(UserDefaults.standard.stringArray(forKey: Self.defeatedKey) ?? [])
+        bestStars = UserDefaults.standard.dictionary(forKey: Self.starsKey) as? [String: Int] ?? [:]
         bestStreak = UserDefaults.standard.integer(forKey: Self.bestStreakKey)
     }
 
@@ -176,10 +180,25 @@ final class EnemyCatalog {
         defeated.contains(enemy.id)
     }
 
-    func markDefeated(bladeID: UUID) {
+    func markDefeated(bladeID: UUID, stars: Int) {
         guard let enemy = Self.enemy(forBladeID: bladeID) else { return }
         defeated.insert(enemy.id)
         UserDefaults.standard.set(Array(defeated), forKey: Self.defeatedKey)
+        // もう一度戦ったときは、よかったほうを残す
+        if stars > self.stars(for: enemy) {
+            bestStars[enemy.id] = min(3, stars)
+            UserDefaults.standard.set(bestStars, forKey: Self.starsKey)
+        }
+    }
+
+    /// そのステージの星（まだ倒していなければ 0。星の記録ができる前に倒した相手は 1）
+    func stars(for enemy: Enemy) -> Int {
+        guard isDefeated(enemy) else { return 0 }
+        return bestStars[enemy.id] ?? 1
+    }
+
+    func totalStars(in story: StoryKind) -> Int {
+        story.enemies.reduce(0) { $0 + stars(for: $1) }
     }
 
     /// すべてのストーリーの敵

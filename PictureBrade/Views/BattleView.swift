@@ -19,7 +19,6 @@ struct BattleView: View {
     @State private var drag: CGSize?
     /// この試合ですでにライフを減らしたか（二重に減らさないため）
     @State private var lifeCharged = false
-    @State private var confirmQuit = false
 
     var body: some View {
         ZStack {
@@ -48,15 +47,6 @@ struct BattleView: View {
             overlayMessage
         }
         .statusBarHidden()
-        .alert("試合をやめますか？", isPresented: $confirmQuit) {
-            Button("やめる", role: .destructive) {
-                chargeLife()
-                dismiss()
-            }
-            Button("続ける", role: .cancel) {}
-        } message: {
-            Text("途中でやめると負けになり、ライフが1つ減ります")
-        }
         .onChange(of: game.phase) { _, phase in
             // ストーリーで負けたらライフを1つ減らす
             if game.mode == .story, phase == .matchOver(playerWon: false) {
@@ -66,7 +56,7 @@ struct BattleView: View {
             ReviewPrompt.recordWin()
             switch game.mode {
             case .story:
-                enemies.markDefeated(bladeID: game.cpu.id)
+                enemies.markDefeated(bladeID: game.cpu.id, stars: game.earnedStars)
             case .endless:
                 enemies.recordStreak(game.winStreak)
                 gameCenter.submitEndless(streak: game.winStreak)
@@ -101,20 +91,6 @@ struct BattleView: View {
             .foregroundStyle(.white)
             .frame(width: 90)
             spinGauge(blade: game.cpu, image: game.cpuImage, spin: game.cpuSpin, score: game.cpuScore, color: Theme.accent)
-        }
-        .overlay(alignment: .topLeading) {
-            Button {
-                if isStoryMatchInProgress {
-                    confirmQuit = true
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .offset(y: -8)
         }
     }
 
@@ -264,13 +240,6 @@ struct BattleView: View {
 
     // MARK: - ライフ（ストーリー）
 
-    /// ストーリーで、シュートしてから決着がつくまでの間
-    private var isStoryMatchInProgress: Bool {
-        guard game.mode == .story, game.hasLaunched, !lifeCharged else { return false }
-        if case .matchOver = game.phase { return false }
-        return true
-    }
-
     private func chargeLife() {
         guard game.mode == .story, !lifeCharged else { return }
         lifeCharged = true
@@ -295,6 +264,12 @@ struct BattleView: View {
         let defeatLine = EnemyCatalog.enemy(forBladeID: game.cpu.id)?.defeat ?? ""
         return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！") {
             VStack(spacing: 12) {
+                VStack(spacing: 4) {
+                    StarRating(stars: game.earnedStars, size: 40, animated: true)
+                    Text("\(game.playerScore) - \(game.cpuScore)" + (game.earnedStars == 3 ? "  パーフェクト！" : "  1点も取られずに勝つと★3"))
+                        .font(.caption.bold())
+                        .foregroundStyle(game.earnedStars == 3 ? Theme.gold : .white.opacity(0.7))
+                }
                 if !defeatLine.isEmpty {
                     Text("\(game.cpu.name)「\(defeatLine)」")
                         .font(.subheadline)

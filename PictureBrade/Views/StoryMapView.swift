@@ -226,6 +226,7 @@ struct StoryMapView: View {
                 enemy: enemy,
                 label: "\(enemy.level)-\(number)",
                 status: status,
+                stars: enemies.stars(for: enemy),
                 isBoss: enemy == chapterEnemies.last,
                 isSelected: selection == enemy,
                 accent: StoryMapTheme(story: story, chapter: enemy.level).accent
@@ -253,6 +254,7 @@ private struct StageNode: View {
     let enemy: Enemy
     let label: String
     let status: Status
+    let stars: Int
     let isBoss: Bool
     let isSelected: Bool
     let accent: Color
@@ -311,22 +313,24 @@ private struct StageNode: View {
                         .offset(y: -16)
                 }
             }
-            .overlay(alignment: .topTrailing) {
-                if status == .defeated {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.white, .green)
-                        .offset(x: 6, y: -4)
-                }
-            }
             .overlay(alignment: .bottom) {
-                Text(label)
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
-                    .fixedSize()
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .background(Capsule().fill(.black.opacity(0.5)))
-                    .offset(y: 16)
+                VStack(spacing: 1) {
+                    // 倒したステージは星を見せる（丸の下のふちに重ねる）
+                    if status == .defeated {
+                        StarRating(stars: stars, size: 13)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(.black.opacity(0.55)))
+                    }
+                    Text(label)
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .fixedSize()
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .background(Capsule().fill(.black.opacity(0.5)))
+                }
+                .fixedSize()
+                .offset(y: status == .defeated ? 30 : 16)
             }
         }
         .buttonStyle(.plain)

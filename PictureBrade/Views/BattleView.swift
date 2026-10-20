@@ -12,10 +12,14 @@ struct BattleView: View {
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(RewardedAdManager.self) private var rewardedAds
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(LifeManager.self) private var life
     @Environment(\.dismiss) private var dismiss
     /// ランダム連戦で勝利時に引いた次の相手（表示のたびに変わらないよう保持する）
     @State private var nextEnemy: Enemy?
     @State private var drag: CGSize?
+    /// この試合ですでにライフを減らしたか（二重に減らさないため）
+    @State private var lifeCharged = false
+    @State private var confirmQuit = false
 
     var body: some View {
         ZStack {
@@ -35,7 +39,20 @@ struct BattleView: View {
             overlayMessage
         }
         .statusBarHidden()
+        .alert("試合をやめますか？", isPresented: $confirmQuit) {
+            Button("やめる", role: .destructive) {
+                chargeLife()
+                dismiss()
+            }
+            Button("続ける", role: .cancel) {}
+        } message: {
+            Text("途中でやめると負けになり、ライフが1つ減ります")
+        }
         .onChange(of: game.phase) { _, phase in
+            // ストーリーで負けたらライフを1つ減らす
+            if game.mode == .story, phase == .matchOver(playerWon: false) {
+                chargeLife()
+            }
             guard phase == .matchOver(playerWon: true) else { return }
             switch game.mode {
             case .story:
@@ -77,7 +94,11 @@ struct BattleView: View {
         }
         .overlay(alignment: .topLeading) {
             Button {
-                dismiss()
+                if isStoryMatchInProgress {
+                    confirmQuit = true
+                } else {
+                    dismiss()
+                }
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
@@ -203,19 +224,52 @@ struct BattleView: View {
                 }
             } else {
                 resultPanel(title: "YOU LOSE…", subtitle: "\(game.playerScore) - \(game.cpuScore)") {
-                    HStack {
-                        Button("もう一度") { game.restartMatch() }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Theme.accent)
-                        Button("やめる") { dismiss() }
-                            .buttonStyle(.bordered)
-                            .tint(.white)
+                    VStack(spacing: 10) {
+                        LifeIndicator()
+                        if life.canPlay {
+                            HStack {
+                                Button("もう一度") { restartStoryMatch() }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(Theme.accent)
+                                Button("やめる") { dismiss() }
+                                    .buttonStyle(.bordered)
+                                    .tint(.white)
+                            }
+                        } else {
+                            Text("ライフがなくなりました")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.white)
+                            LifeRefillButton()
+                            Button("やめる") { dismiss() }
+                                .buttonStyle(.bordered)
+                                .tint(.white)
+                        }
                     }
                 }
             }
         default:
             EmptyView()
         }
+    }
+
+    // MARK: - ライフ（ストーリー）
+
+    /// ストーリーで、シュートしてから決着がつくまでの間
+    private var isStoryMatchInProgress: Bool {
+        guard game.mode == .story, game.hasLaunched, !lifeCharged else { return false }
+        if case .matchOver = game.phase { return false }
+        return true
+    }
+
+    private func chargeLife() {
+        guard game.mode == .story, !lifeCharged else { return }
+        lifeCharged = true
+        life.consume()
+    }
+
+    private func restartStoryMatch() {
+        lifeCharged = false
+        game.restartMatch()
     }
 
     @ViewBuilder
@@ -397,15 +451,22 @@ private struct AimArrow: View {
             let length = hypot(drag.width, drag.height)
             let direction = length > 0 ? CGPoint(x: -drag.width / length, y: -drag.height / length) : .zero
             let end = CGPoint(x: start.x + direction.x * (40 + 160 * power), y: start.y + direction.y * (40 + 160 * power))
+            // 矢じりの付け根。点線はここで止めて、矢じりから線がはみ出さないようにする
+            let headLength: CGFloat = 26
+            let headHalfWidth: CGFloat = 15
+            let base = CGPoint(x: end.x - direction.x * headLength, y: end.y - direction.y * headLength)
             Path { path in
                 path.move(to: start)
-                path.addLine(to: end)
+                path.addLine(to: base)
             }
             .stroke(Theme.gold, style: StrokeStyle(lineWidth: 6, lineCap: .round, dash: [12, 8]))
-            Circle()
-                .fill(Theme.gold)
-                .frame(width: 18, height: 18)
-                .position(end)
+            Path { path in
+                path.move(to: end)
+                path.addLine(to: CGPoint(x: base.x - direction.y * headHalfWidth, y: base.y + direction.x * headHalfWidth))
+                path.addLine(to: CGPoint(x: base.x + direction.y * headHalfWidth, y: base.y - direction.x * headHalfWidth))
+                path.closeSubpath()
+            }
+            .fill(Theme.gold)
         }
         .allowsHitTesting(false)
     }

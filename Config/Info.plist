@@ -4,6 +4,8 @@
 <dict>
 	<key>PexelsAPIKey</key>
 	<string>$(PEXELS_API_KEY)</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>あなたに合った広告を表示するために使用します。許可しなくてもアプリはすべての機能を使えます。</string>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-8522231452310619~6274512653</string>
 	<key>SKAdNetworkItems</key>

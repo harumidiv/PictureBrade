@@ -44,6 +44,17 @@ struct DialogueView: View {
         dialogue.lines[...index].last { $0.portrait != nil }
     }
 
+    /// 同じ挿絵が続くあいだは同じ id にして、セリフが進んでも挿絵が切り替え直されないようにする
+    private var illustrationRunStart: Int {
+        var start = index
+        while start > 0,
+              let previous = dialogue.lines[start - 1].illustration?.sceneName,
+              previous == line.illustration?.sceneName {
+            start -= 1
+        }
+        return start
+    }
+
     var body: some View {
         ZStack {
             Theme.background.ignoresSafeArea()
@@ -59,7 +70,7 @@ struct DialogueView: View {
                 }
                 if let illustration = line.illustration {
                     StoryIllustrationView(illustration: illustration)
-                        .id(index)
+                        .id(illustrationRunStart)
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 } else if let portrait = currentPortrait, let image = portrait.portrait {
                     BladeBadge(image: image, tint: portrait.portraitTint, size: 180, spinning: true)

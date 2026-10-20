@@ -72,6 +72,8 @@ final class BattleGame {
     private(set) var cpuSkill: Float
 
     private(set) var phase: Phase = .loading
+    /// この試合で一度でもシュートしたか（途中でやめたときにライフを減らすかの判定に使う）
+    private(set) var hasLaunched = false
     private(set) var playerScore = 0
     private(set) var cpuScore = 0
     private(set) var round = 1
@@ -99,6 +101,22 @@ final class BattleGame {
     @ObservationIgnored private let cameraBase: SIMD3<Float> = [0, 3.0, 2.4]
     @ObservationIgnored private var cameraShake: Float = 0
     @ObservationIgnored private var sparks: [(entity: ModelEntity, age: Float)] = []
+    @ObservationIgnored private var sparkStreaks: [SparkStreak] = []
+    /// ポケットが回った角度。ステージ外に出られる場所がゆっくり移動していく
+    @ObservationIgnored private var pocketRotation: Float = 0
+    @ObservationIgnored private var pocketRim: Entity?
+
+    /// 飛び散る火花1本
+    private struct SparkStreak {
+        let entity: ModelEntity
+        var velocity: SIMD3<Float>
+        var age: Float = 0
+        let life: Float
+        var colorStage = 0
+    }
+
+    /// 一度に出す火花の上限（重くならないように）
+    private static let maxSparkStreaks = 220
     @ObservationIgnored private var accumulator: Float = 0
     @ObservationIgnored private var steering: SIMD2<Float> = .zero
     @ObservationIgnored private var finishDelay: Float = 0
@@ -146,7 +164,9 @@ final class BattleGame {
         fill.position = [-1.5, 2, -1]
         worldRoot.addChild(fill)
 
-        worldRoot.addChild(SceneBuilder.makeStadium())
+        let stadium = SceneBuilder.makeStadium()
+        worldRoot.addChild(stadium)
+        pocketRim = stadium.findEntity(named: SceneBuilder.pocketRimName)
 
         tops = [
             TopState(stats: player.stats, position: Self.playerStart),
@@ -185,6 +205,7 @@ final class BattleGame {
         tops[Self.cpuIndex].spin = 0.55 + 0.45 * cpuPower
 
         phase = .battle
+        hasLaunched = true
         haptics.impactOccurred(intensity: CGFloat(power))
     }
 
@@ -231,6 +252,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 
@@ -242,6 +264,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 
@@ -256,6 +279,7 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
+        hasLaunched = false
         resetRound()
     }
 
@@ -298,6 +322,7 @@ final class BattleGame {
         case .battle, .roundOver, .matchOver:
             simulate(dt: dt)
         }
+        rotatePockets(dt: dt)
         updateEffects(dt: dt)
         syncEntities()
         updateHUD()
@@ -311,12 +336,20 @@ final class BattleGame {
         accumulator += dt
         while accumulator >= BattlePhysics.fixedStep {
             accumulator -= BattlePhysics.fixedStep
-            let events = BattlePhysics.step(&tops, dt: BattlePhysics.fixedStep)
+            let events = BattlePhysics.step(&tops, dt: BattlePhysics.fixedStep, pocketRotation: pocketRotation)
             events.forEach(handleCollision)
         }
         if phase == .battle {
             checkFinish(dt: dt)
         }
+    }
+
+    /// 発射前もポケットは回り続ける（タイミングを見て発射する楽しみになる）
+    private func rotatePockets(dt: Float) {
+        pocketRotation = (pocketRotation + StadiumGeometry.pocketRotationSpeed * dt)
+            .truncatingRemainder(dividingBy: 2 * .pi)
+        // 2D の角度 θ の点は、Y 軸まわりに -θ 回すと角度 θ の方向へ動く
+        pocketRim?.orientation = simd_quatf(angle: -pocketRotation, axis: [0, 1, 0])
     }
 
     private func applySteering(dt: Float) {
@@ -390,6 +423,9 @@ final class BattleGame {
         worldRoot.addChild(spark)
         sparks.append((spark, 0))
 
+        emitSparks(at: spark.position, strength: event.strength)
+        ImpactSound.shared.play(strength: event.strength, isWall: event.isWall)
+
         cameraShake = max(cameraShake, min(event.strength * 0.02, 0.06))
         if time - lastHapticTime > 0.08 {
             lastHapticTime = time
@@ -397,15 +433,68 @@ final class BattleGame {
         }
     }
 
+    /// ぶつかった点から火花を飛び散らせる。強くぶつかるほど多く、速く飛ぶ
+    private func emitSparks(at point: SIMD3<Float>, strength: Float) {
+        let power = min(max(strength, 0.2), 3)
+        let count = min(Int(10 + 14 * power), Self.maxSparkStreaks - sparkStreaks.count)
+        guard count > 0 else { return }
+        for _ in 0..<count {
+            // 上向きの半球に散らす（真横〜斜め上が多くなるようにする）
+            let angle = Float.random(in: 0..<(2 * .pi))
+            let elevation = Float.random(in: 0.1...1.1)
+            let direction = SIMD3<Float>(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
+            let speed = Float.random(in: 0.6...1.6) * (0.8 + 0.5 * power)
+            let entity = SceneBuilder.makeSparkStreak()
+            entity.position = point
+            worldRoot.addChild(entity)
+            sparkStreaks.append(SparkStreak(entity: entity, velocity: direction * speed, life: .random(in: 0.25...0.55)))
+        }
+    }
+
+    private func updateSparkStreaks(dt: Float) {
+        let gravity: Float = 5
+        for index in sparkStreaks.indices.reversed() {
+            var streak = sparkStreaks[index]
+            streak.age += dt
+            let floor = StadiumGeometry.height(at: simd_length(SIMD2(streak.entity.position.x, streak.entity.position.z)))
+            if streak.age > streak.life || streak.entity.position.y < floor - 0.02 {
+                streak.entity.removeFromParent()
+                sparkStreaks.remove(at: index)
+                continue
+            }
+            streak.velocity.y -= gravity * dt
+            streak.velocity *= 1 - 1.2 * dt
+            let position = streak.entity.position + streak.velocity * dt
+            streak.entity.position = position
+
+            // 飛ぶ向きに向けて、速いほど長く、冷めるほど細くする
+            let speed = simd_length(streak.velocity)
+            if speed > 0.001 {
+                streak.entity.look(at: position + streak.velocity, from: position, relativeTo: worldRoot)
+            }
+            let progress = streak.age / streak.life
+            let thickness = 1.2 - 0.8 * progress
+            streak.entity.scale = [thickness, thickness, 0.4 + speed * 0.9]
+
+            let stage = min(Int(progress * Float(SceneBuilder.sparkMaterials.count)), SceneBuilder.sparkMaterials.count - 1)
+            if stage != streak.colorStage {
+                streak.colorStage = stage
+                streak.entity.model?.materials = [SceneBuilder.sparkMaterials[stage]]
+            }
+            sparkStreaks[index] = streak
+        }
+    }
+
     private func updateEffects(dt: Float) {
+        updateSparkStreaks(dt: dt)
         for index in sparks.indices.reversed() {
             sparks[index].age += dt
             let entity = sparks[index].entity
-            if sparks[index].age > 0.18 {
+            if sparks[index].age > 0.12 {
                 entity.removeFromParent()
                 sparks.remove(at: index)
             } else {
-                entity.scale *= 1 + dt * 6
+                entity.scale *= 1 + dt * 8
             }
         }
 

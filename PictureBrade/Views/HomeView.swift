@@ -3,6 +3,7 @@
 //  PictureBrade
 //
 
+import StoreKit
 import SwiftUI
 import UIKit
 
@@ -11,6 +12,7 @@ struct HomeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(\.requestReview) private var requestReview
     @State private var isAddingBlade = false
     @State private var isShowingCollection = false
     @State private var battleMode: BattleGame.Mode?
@@ -43,7 +45,7 @@ struct HomeView: View {
             .sheet(isPresented: $isShowingCollection) {
                 BladeCollectionView()
             }
-            .fullScreenCover(item: $battleMode) { mode in
+            .fullScreenCover(item: $battleMode, onDismiss: requestReviewIfNeeded) { mode in
                 switch mode {
                 case .story: StoryView()
                 case .endless: EndlessSetupView()
@@ -69,6 +71,18 @@ struct HomeView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 8)
+    }
+
+    /// ストーリーやランダム連戦から戻ってきたときに、ある程度遊んでいればレビューをお願いする
+    /// （バトル中には出さない。1つのバージョンにつき1回だけ）
+    private func requestReviewIfNeeded() {
+        guard ReviewPrompt.shouldRequest else { return }
+        ReviewPrompt.markRequested()
+        Task {
+            // 画面が閉じ終わってから出す
+            try? await Task.sleep(for: .seconds(0.8))
+            requestReview()
+        }
     }
 
     private func cycleHeroBlade() {

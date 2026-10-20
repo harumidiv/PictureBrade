@@ -63,6 +63,7 @@ struct BattleView: View {
                 chargeLife()
             }
             guard phase == .matchOver(playerWon: true) else { return }
+            ReviewPrompt.recordWin()
             switch game.mode {
             case .story:
                 enemies.markDefeated(bladeID: game.cpu.id)

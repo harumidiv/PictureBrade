@@ -8,13 +8,31 @@ import Observation
 import UIKit
 
 enum AdConfig {
-    /// ランダム連戦のコンティニュー用リワード広告。
     /// 開発中に本番広告を表示・タップするとポリシー違反になるため、Debug では Google 公式のテスト広告を使う
     #if DEBUG
     static let continueRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
+    static let lifeRefillRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
     #else
+    /// ランダム連戦のコンティニュー
     static let continueRewardedUnitID = "ca-app-pub-8522231452310619/1172650202"
+    /// ストーリーのライフ復活
+    static let lifeRefillRewardedUnitID = "ca-app-pub-8522231452310619/7770275775"
     #endif
+}
+
+/// 用途ごとのリワード広告。広告ユニットを分けて、どこで見られているかを AdMob で区別できるようにする
+@Observable
+final class RewardedAds {
+    /// ランダム連戦のコンティニュー
+    let continuation = RewardedAdManager(unitID: AdConfig.continueRewardedUnitID)
+    /// ストーリーのライフ復活
+    let lifeRefill = RewardedAdManager(unitID: AdConfig.lifeRefillRewardedUnitID)
+
+    func start() {
+        MobileAds.shared.start(completionHandler: nil)
+        continuation.load()
+        lifeRefill.load()
+    }
 }
 
 /// リワード広告を事前に読み込んでおき、見終わったら報酬の有無を返す
@@ -23,19 +41,19 @@ final class RewardedAdManager: NSObject, FullScreenContentDelegate {
     private(set) var isReady = false
     private(set) var isLoading = false
 
+    private let unitID: String
     @ObservationIgnored private var ad: RewardedAd?
     @ObservationIgnored private var didEarnReward = false
     @ObservationIgnored private var completion: ((Bool) -> Void)?
 
-    func start() {
-        MobileAds.shared.start(completionHandler: nil)
-        load()
+    init(unitID: String) {
+        self.unitID = unitID
     }
 
     func load() {
         guard ad == nil, !isLoading else { return }
         isLoading = true
-        RewardedAd.load(with: AdConfig.continueRewardedUnitID, request: Request()) { [weak self] ad, _ in
+        RewardedAd.load(with: unitID, request: Request()) { [weak self] ad, _ in
             Task { @MainActor in
                 guard let self else { return }
                 self.isLoading = false
@@ -76,7 +94,7 @@ final class RewardedAdManager: NSObject, FullScreenContentDelegate {
         self.completion = nil
         ad = nil
         isReady = false
-        // 次のコンティニューに備えて読み込み直す
+        // 次に備えて読み込み直す
         load()
         completion?(earned)
     }

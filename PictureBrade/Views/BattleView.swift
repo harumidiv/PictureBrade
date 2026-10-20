@@ -10,7 +10,7 @@ import UIKit
 struct BattleView: View {
     let game: BattleGame
     @Environment(EnemyCatalog.self) private var enemies
-    @Environment(RewardedAdManager.self) private var rewardedAds
+    @Environment(RewardedAds.self) private var rewardedAds
     @Environment(GameCenterManager.self) private var gameCenter
     @Environment(LifeManager.self) private var life
     @Environment(\.dismiss) private var dismiss
@@ -326,18 +326,18 @@ struct BattleView: View {
     /// 広告を最後まで見たら、連勝を引き継いで同じ相手に再挑戦
     private var continueButton: some View {
         Button {
-            rewardedAds.show { earned in
+            rewardedAds.continuation.show { earned in
                 if earned { game.continueAfterLoss() }
             }
         } label: {
             HStack(spacing: 8) {
-                if rewardedAds.isReady {
+                if rewardedAds.continuation.isReady {
                     Image(systemName: "play.rectangle.fill")
                 } else {
                     ProgressView().tint(.white)
                 }
                 VStack(spacing: 0) {
-                    Text(rewardedAds.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
+                    Text(rewardedAds.continuation.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
                         .font(.headline)
                     Text("\(game.streakBeforeLoss)連勝を引き継いで再挑戦（1回まで）")
                         .font(.caption2)
@@ -349,8 +349,8 @@ struct BattleView: View {
         .buttonStyle(.borderedProminent)
         .tint(Theme.gold)
         .foregroundStyle(.black)
-        .disabled(!rewardedAds.isReady)
-        .onAppear { rewardedAds.load() }
+        .disabled(!rewardedAds.continuation.isReady)
+        .onAppear { rewardedAds.continuation.load() }
     }
 
     private func challenge(_ enemy: Enemy) {

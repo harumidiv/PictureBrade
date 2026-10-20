@@ -8,16 +8,16 @@ import UIKit
 
 /// プロローグ・エンディングの挿絵（アプリ内で描画してアニメーションさせる）
 enum StoryIllustration {
-    /// 辞書から文字が飛び出す
-    case dictionaryBurst
+    /// 文字が飛び出してくる（漢字は辞書、ひらがなはおもちゃ箱、絵文字はUFOから）
+    case dictionaryBurst(StoryKind)
     /// 文字のコマが夜の街で暴れまわる
-    case cityRampage
+    case cityRampage(StoryKind)
     /// 写真から被写体が切り抜かれてコマになる
     case photoBlade(UIImage?)
     /// 自分のコマと文字たちが向かい合う
     case faceOff(UIImage?)
-    /// 文字たちが辞書へ帰っていく
-    case returnToDictionary
+    /// 文字たちが元の場所へ帰っていく
+    case returnToDictionary(StoryKind)
 
     /// 同じ場面かどうかの判定用
     var sceneName: String {
@@ -39,9 +39,9 @@ struct StoryIllustrationView: View {
             let time = timeline.date.timeIntervalSinceReferenceDate
             Group {
                 switch illustration {
-                case .dictionaryBurst: DictionaryScene(time: time, reversed: false)
-                case .returnToDictionary: DictionaryScene(time: time, reversed: true)
-                case .cityRampage: CityScene(time: time)
+                case .dictionaryBurst(let story): OriginScene(time: time, story: story, reversed: false)
+                case .returnToDictionary(let story): OriginScene(time: time, story: story, reversed: true)
+                case .cityRampage(let story): CityScene(time: time, characters: story.illustrationCharacters)
                 case .photoBlade(let image): PhotoBladeScene(time: time, image: image)
                 case .faceOff(let image): FaceOffScene(time: time, image: image)
                 }
@@ -55,10 +55,45 @@ struct StoryIllustrationView: View {
 
 // MARK: - 共通
 
-private let flyingCharacters: [(String, Color)] = [
-    ("一", .cyan), ("火", .orange), ("龍", .red), ("鬼", .purple), ("水", .blue),
-    ("山", .green), ("雷", .yellow), ("覇", .yellow), ("人", .mint), ("川", .teal),
-]
+extension StoryKind {
+    /// 挿絵などで飛び回る文字（街で暴れるのは 2・3・6 番目）
+    var illustrationCharacters: [(String, Color)] {
+        switch self {
+        case .kanji:
+            [("一", .cyan), ("火", .orange), ("龍", .red), ("鬼", .purple), ("水", .blue),
+             ("山", .green), ("雷", .yellow), ("覇", .yellow), ("人", .mint), ("川", .teal)]
+        case .hiragana:
+            [("あ", .red), ("の", .mint), ("ぬ", .purple), ("ぱ", .pink), ("い", .orange),
+             ("る", .cyan), ("ん", .yellow), ("っ", .indigo), ("お", .blue), ("め", .pink)]
+        case .emoji:
+            [("🙂", .yellow), ("🐸", .green), ("🍔", .orange), ("👽", .green), ("🍣", .red),
+             ("🐶", .brown), ("🚀", .indigo), ("👾", .purple), ("🍩", .pink), ("🪐", .orange)]
+        }
+    }
+}
+
+/// 文字が飛び出してくる場所（帰っていくときは逆再生）
+private struct OriginScene: View {
+    let time: TimeInterval
+    let story: StoryKind
+    let reversed: Bool
+
+    var body: some View {
+        switch story {
+        case .kanji:
+            DictionaryScene(time: time, reversed: reversed, characters: story.illustrationCharacters) {
+                OpenBook()
+            }
+        case .hiragana:
+            DictionaryScene(time: time, reversed: reversed, characters: story.illustrationCharacters,
+                            background: [Color(red: 1, green: 0.55, blue: 0.65), Color(red: 0.35, green: 0.15, blue: 0.4)]) {
+                ToyBox()
+            }
+        case .emoji:
+            UFOScene(time: time, reversed: reversed, characters: story.illustrationCharacters)
+        }
+    }
+}
 
 /// 回転する文字のコマ（上から少し傾けて見た円盤 + 文字）
 private struct SpinningCharacterTop: View {
@@ -87,31 +122,34 @@ private struct SpinningCharacterTop: View {
 
 // MARK: - 辞書から飛び出す
 
-private struct DictionaryScene: View {
+private struct DictionaryScene<Source: View>: View {
     let time: TimeInterval
     let reversed: Bool
+    let characters: [(String, Color)]
+    var background = [Color(red: 0.35, green: 0.2, blue: 0.6), Color(red: 0.05, green: 0.03, blue: 0.15)]
+    @ViewBuilder let source: Source
 
     var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             let bookCenter = CGPoint(x: size.width / 2, y: size.height * 0.78)
             ZStack {
-                RadialGradient(colors: [Color(red: 0.35, green: 0.2, blue: 0.6), Color(red: 0.05, green: 0.03, blue: 0.15)],
+                RadialGradient(colors: background,
                                center: UnitPoint(x: 0.5, y: 0.75), startRadius: 10, endRadius: size.width)
-                // 辞書から立ちのぼる光
+                // 立ちのぼる光
                 Ellipse()
                     .fill(RadialGradient(colors: [Color.yellow.opacity(0.7), .clear], center: .center, startRadius: 0, endRadius: 120))
                     .frame(width: 260, height: 220)
                     .position(x: bookCenter.x, y: bookCenter.y - 60)
                     .opacity(0.6 + 0.3 * sin(time * 3))
 
-                OpenBook()
+                source
                     .frame(width: 220, height: 90)
                     .position(bookCenter)
 
-                ForEach(flyingCharacters.indices, id: \.self) { index in
-                    let (character, color) = flyingCharacters[index]
-                    let raw = (time * 0.35 + Double(index) / Double(flyingCharacters.count)).truncatingRemainder(dividingBy: 1)
+                ForEach(characters.indices, id: \.self) { index in
+                    let (character, color) = characters[index]
+                    let raw = (time * 0.35 + Double(index) / Double(characters.count)).truncatingRemainder(dividingBy: 1)
                     // 帰っていくときは逆再生
                     let t = reversed ? 1 - raw : raw
                     let direction = Double(index % 2 == 0 ? 1 : -1) * (0.3 + Double(index) / 14)
@@ -171,6 +209,153 @@ private struct OpenBook: View {
     }
 }
 
+/// こどもの国のおもちゃ箱（ふたが開いている）
+private struct ToyBox: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width, h = proxy.size.height
+            ZStack {
+                // 右端を支点にして開いたふた
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(red: 1, green: 0.45, blue: 0.5))
+                    .frame(width: w * 0.62, height: h * 0.16)
+                    .rotationEffect(.degrees(20), anchor: .bottomTrailing)
+                    .offset(x: -w * 0.01, y: -h * 0.33)
+                // 箱
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(LinearGradient(colors: [Color(red: 1, green: 0.82, blue: 0.3), Color(red: 0.98, green: 0.6, blue: 0.2)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(width: w * 0.6, height: h * 0.8)
+                    .offset(y: h * 0.1)
+                    .overlay(
+                        // 水玉もよう
+                        HStack(spacing: w * 0.05) {
+                            ForEach([Color.red, .blue, .green, .purple], id: \.self) { color in
+                                Circle().fill(color.opacity(0.7)).frame(width: h * 0.16)
+                            }
+                        }
+                        .offset(y: h * 0.32)
+                    )
+                Text("こどものくに")
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
+                    .offset(y: h * 0.06)
+            }
+            .frame(width: w, height: h)
+        }
+    }
+}
+
+/// 宇宙から来たUFOが絵文字を降らせる（帰っていくときは吸いこむ）
+private struct UFOScene: View {
+    let time: TimeInterval
+    let reversed: Bool
+    let characters: [(String, Color)]
+
+    private static let skyline: [CGFloat] = [0.16, 0.24, 0.12, 0.28, 0.18, 0.22, 0.14, 0.26, 0.17]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let size = proxy.size
+            let ufo = CGPoint(x: size.width / 2 + CGFloat(sin(time * 1.3)) * 18, y: size.height * 0.2)
+            let groundY = size.height * 0.88
+            ZStack {
+                LinearGradient(colors: [Color(red: 0.02, green: 0.02, blue: 0.12), Color(red: 0.12, green: 0.08, blue: 0.35)],
+                               startPoint: .top, endPoint: .bottom)
+                Sparkles(time: time, area: size)
+                city(size)
+                beam(from: ufo, to: groundY, width: size.width * 0.7)
+                ForEach(characters.indices, id: \.self) { index in
+                    fallingCharacter(index, from: ufo, to: groundY, width: size.width)
+                }
+                UFO()
+                    .frame(width: 150, height: 64)
+                    .position(ufo)
+            }
+        }
+    }
+
+    /// 夜の街
+    private func city(_ size: CGSize) -> some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(Self.skyline.indices, id: \.self) { index in
+                Rectangle()
+                    .fill(Color(red: 0.08, green: 0.08, blue: 0.2))
+                    .frame(height: size.height * Self.skyline[index])
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .bottom)
+    }
+
+    /// 光のビーム
+    private func beam(from ufo: CGPoint, to groundY: CGFloat, width: CGFloat) -> some View {
+        Trapezoid()
+            .fill(LinearGradient(colors: [Color.cyan.opacity(0.55), Color.cyan.opacity(0.05)], startPoint: .top, endPoint: .bottom))
+            .frame(width: width, height: groundY - ufo.y)
+            .position(x: ufo.x, y: (ufo.y + groundY) / 2)
+            .opacity(0.7 + 0.3 * sin(time * 5))
+    }
+
+    /// 降りてくる絵文字（帰るときは昇っていく）
+    private func fallingCharacter(_ index: Int, from ufo: CGPoint, to groundY: CGFloat, width: CGFloat) -> some View {
+        let raw = (time * 0.3 + Double(index) / Double(characters.count)).truncatingRemainder(dividingBy: 1)
+        let t = reversed ? 1 - raw : raw
+        let spread: Double = (index % 2 == 0 ? 1 : -1) * (0.15 + Double(index) / 30)
+        let x = ufo.x + CGFloat(spread * t) * width
+        let y = ufo.y + 20 + (groundY - ufo.y - 40) * CGFloat(t)
+        let opacity = t < 0.08 ? t / 0.08 : (t > 0.88 ? (1 - t) / 0.12 : 1)
+        return Text(characters[index].0)
+            .font(.system(size: 18 + 26 * t))
+            .rotationEffect(.radians(t * 5 * spread))
+            .position(x: x, y: y)
+            .opacity(opacity)
+    }
+}
+
+private struct UFO: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let w = proxy.size.width, h = proxy.size.height
+            ZStack {
+                // ドーム
+                Ellipse()
+                    .fill(LinearGradient(colors: [Color.cyan.opacity(0.9), Color.white.opacity(0.4)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: w * 0.42, height: h * 0.7)
+                    .offset(y: -h * 0.18)
+                Text("👽")
+                    .font(.system(size: h * 0.32))
+                    .offset(y: -h * 0.22)
+                // 円盤
+                Ellipse()
+                    .fill(LinearGradient(colors: [Color(white: 0.85), Color(white: 0.45)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: w, height: h * 0.42)
+                    .offset(y: h * 0.12)
+                HStack(spacing: w * 0.1) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        Circle().fill(Color.yellow).frame(width: h * 0.1)
+                    }
+                }
+                .offset(y: h * 0.14)
+            }
+            .frame(width: w, height: h)
+        }
+    }
+}
+
+/// 上が細く下が広い台形（UFOのビーム）
+private struct Trapezoid: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX - rect.width * 0.12, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.12, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+        }
+    }
+}
+
 private struct Sparkles: View {
     let time: TimeInterval
     let area: CGSize
@@ -193,6 +378,7 @@ private struct Sparkles: View {
 
 private struct CityScene: View {
     let time: TimeInterval
+    let characters: [(String, Color)]
 
     /// ビルの並び（相対幅, 相対高さ）
     private let buildings: [(CGFloat, CGFloat)] = [
@@ -236,7 +422,7 @@ private struct CityScene: View {
 
                 // 暴れる文字のコマたち
                 ForEach(0..<3, id: \.self) { index in
-                    let (character, color) = flyingCharacters[[2, 3, 6][index]]
+                    let (character, color) = characters[[2, 3, 6][index]]
                     let speed = 0.18 + Double(index) * 0.07
                     let progress = (time * speed + Double(index) * 0.37).truncatingRemainder(dividingBy: 1)
                     // 左右に行ったり来たり

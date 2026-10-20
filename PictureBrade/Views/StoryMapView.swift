@@ -6,9 +6,10 @@
 import SwiftUI
 import UIKit
 
-/// ストーリーの冒険マップ。下のスタートから道をたどって、いちばん上の覇王の城を目指す
+/// ストーリーの冒険マップ。下のスタートから道をたどって、いちばん上のゴールを目指す
 struct StoryMapView: View {
     @Environment(EnemyCatalog.self) private var enemies
+    let story: StoryKind
     let playerImage: UIImage?
     let playerTint: Color
     /// 選んでいるステージ（nil ならゴール＝エンディング）
@@ -21,7 +22,7 @@ struct StoryMapView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let layout = StoryMapLayout(width: proxy.size.width)
+            let layout = StoryMapLayout(story: story, width: proxy.size.width)
             ScrollView(showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
                     terrain(layout)
@@ -41,7 +42,7 @@ struct StoryMapView: View {
                 didInitialScroll = true
                 scrollToCurrent(layout, viewport: size.height, animated: false)
             }
-            .onChange(of: enemies.nextStoryEnemy) {
+            .onChange(of: enemies.nextStoryEnemy(in: story)) {
                 scrollToCurrent(layout, viewport: proxy.size.height, animated: true)
             }
             .onChange(of: selection) { old, new in
@@ -52,8 +53,8 @@ struct StoryMapView: View {
 
     /// ステージ（nil ならゴール）の道の上の番号
     private func routeIndex(of stage: Enemy?, _ layout: StoryMapLayout) -> Int {
-        guard let stage, let index = EnemyCatalog.enemies.firstIndex(of: stage) else {
-            return enemies.isStoryCleared ? layout.route.count - 1 : currentRouteIndex(layout)
+        guard let stage, let index = story.enemies.firstIndex(of: stage) else {
+            return enemies.isStoryCleared(story) ? layout.route.count - 1 : currentRouteIndex(layout)
         }
         return index + 1
     }
@@ -88,9 +89,9 @@ struct StoryMapView: View {
     }
 
     private func terrain(_ layout: StoryMapLayout) -> some View {
-        ForEach(Story.chapters) { chapter in
+        ForEach(story.chapters) { chapter in
             let band = layout.band(for: chapter.number)
-            let theme = StoryMapTheme(chapter: chapter.number)
+            let theme = StoryMapTheme(story: story, chapter: chapter.number)
             // 下の章とのつなぎ目をぼかすため、下に少しはみ出させて透明にしていく
             let overlap: CGFloat = chapter.number == 1 ? 0 : 60
             let height = band.bottom - band.top + overlap
@@ -114,8 +115,8 @@ struct StoryMapView: View {
 
     private func decorations(_ layout: StoryMapLayout) -> some View {
         ForEach(layout.decorations) { decoration in
-            let theme = StoryMapTheme(chapter: decoration.chapter)
-            let reached = Story.chapters.first { $0.number == decoration.chapter }.map(isReached) ?? false
+            let theme = StoryMapTheme(story: story, chapter: decoration.chapter)
+            let reached = story.chapters.first { $0.number == decoration.chapter }.map(isReached) ?? false
             Image(systemName: theme.symbols[decoration.variant % theme.symbols.count])
                 .font(.system(size: decoration.size))
                 .foregroundStyle(theme.decoration)
@@ -129,8 +130,8 @@ struct StoryMapView: View {
 
     /// いま挑む場所（道の上での番号）。全部倒したらゴール
     private func currentRouteIndex(_ layout: StoryMapLayout) -> Int {
-        guard let next = enemies.nextStoryEnemy,
-              let index = EnemyCatalog.enemies.firstIndex(of: next) else { return layout.route.count - 1 }
+        guard let next = enemies.nextStoryEnemy(in: story),
+              let index = story.enemies.firstIndex(of: next) else { return layout.route.count - 1 }
         return index + 1
     }
 
@@ -156,7 +157,7 @@ struct StoryMapView: View {
     // MARK: - 看板・ゴール
 
     private func signs(_ layout: StoryMapLayout) -> some View {
-        ForEach(Story.chapters) { chapter in
+        ForEach(story.chapters) { chapter in
             let reached = isReached(chapter)
             VStack(spacing: 0) {
                 Text("第\(chapter.number)章")
@@ -181,7 +182,7 @@ struct StoryMapView: View {
     }
 
     private func goal(_ layout: StoryMapLayout) -> some View {
-        let cleared = enemies.isStoryCleared
+        let cleared = enemies.isStoryCleared(story)
         let isSelected = cleared && selection == nil
         return Button {
             if cleared { selection = nil }
@@ -216,18 +217,18 @@ struct StoryMapView: View {
     // MARK: - ステージ
 
     private func stages(_ layout: StoryMapLayout) -> some View {
-        ForEach(Array(EnemyCatalog.enemies.enumerated()), id: \.element.id) { index, enemy in
-            let chapterEnemies = EnemyCatalog.enemies.filter { $0.level == enemy.level }
+        ForEach(Array(story.enemies.enumerated()), id: \.element.id) { index, enemy in
+            let chapterEnemies = story.enemies.filter { $0.level == enemy.level }
             let number = (chapterEnemies.firstIndex(of: enemy) ?? 0) + 1
             let status: StageNode.Status = enemies.isDefeated(enemy) ? .defeated
-                : enemy == enemies.nextStoryEnemy ? .next : .locked
+                : enemy == enemies.nextStoryEnemy(in: story) ? .next : .locked
             StageNode(
                 enemy: enemy,
                 label: "\(enemy.level)-\(number)",
                 status: status,
                 isBoss: enemy == chapterEnemies.last,
                 isSelected: selection == enemy,
-                accent: StoryMapTheme(chapter: enemy.level).accent
+                accent: StoryMapTheme(story: story, chapter: enemy.level).accent
             ) {
                 selection = enemy
             }
@@ -385,38 +386,94 @@ private struct StoryMapTheme {
     let accent: Color
     let symbols: [String]
 
-    init(chapter: Int) {
+    private init(_ top: Color, _ bottom: Color, decoration: Color, accent: Color, symbols: [String]) {
+        self.top = top
+        self.bottom = bottom
+        self.decoration = decoration
+        self.accent = accent
+        self.symbols = symbols
+    }
+
+    init(story: StoryKind, chapter: Int) {
+        switch story {
+        case .kanji: self = Self.kanji(chapter)
+        case .hiragana: self = Self.hiragana(chapter)
+        case .emoji: self = Self.emoji(chapter)
+        }
+    }
+
+    private static func kanji(_ chapter: Int) -> StoryMapTheme {
         switch chapter {
         case 1: // はじまりの文字：草原
-            top = Color(red: 0.5, green: 0.76, blue: 0.4)
-            bottom = Color(red: 0.36, green: 0.62, blue: 0.3)
-            decoration = Color(red: 0.16, green: 0.42, blue: 0.16)
-            accent = Color(red: 0.25, green: 0.65, blue: 0.3)
-            symbols = ["tree.fill", "leaf.fill", "camera.macro", "tree.fill"]
+            StoryMapTheme(Color(red: 0.5, green: 0.76, blue: 0.4), Color(red: 0.36, green: 0.62, blue: 0.3),
+                          decoration: Color(red: 0.16, green: 0.42, blue: 0.16), accent: Color(red: 0.25, green: 0.65, blue: 0.3),
+                          symbols: ["tree.fill", "leaf.fill", "camera.macro", "tree.fill"])
         case 2: // 五行の試練：荒野
-            top = Color(red: 0.9, green: 0.74, blue: 0.46)
-            bottom = Color(red: 0.8, green: 0.6, blue: 0.34)
-            decoration = Color(red: 0.6, green: 0.36, blue: 0.16)
-            accent = Color(red: 0.9, green: 0.5, blue: 0.15)
-            symbols = ["mountain.2.fill", "flame.fill", "drop.fill", "leaf.fill"]
+            StoryMapTheme(Color(red: 0.9, green: 0.74, blue: 0.46), Color(red: 0.8, green: 0.6, blue: 0.34),
+                          decoration: Color(red: 0.6, green: 0.36, blue: 0.16), accent: Color(red: 0.9, green: 0.5, blue: 0.15),
+                          symbols: ["mountain.2.fill", "flame.fill", "drop.fill", "leaf.fill"])
         case 3: // 荒ぶる自然：嵐の森
-            top = Color(red: 0.26, green: 0.5, blue: 0.5)
-            bottom = Color(red: 0.18, green: 0.4, blue: 0.4)
-            decoration = Color(red: 0.75, green: 0.9, blue: 0.95)
-            accent = Color(red: 0.2, green: 0.6, blue: 0.85)
-            symbols = ["cloud.bolt.fill", "wind", "tornado", "cloud.rain.fill"]
+            StoryMapTheme(Color(red: 0.26, green: 0.5, blue: 0.5), Color(red: 0.18, green: 0.4, blue: 0.4),
+                          decoration: Color(red: 0.75, green: 0.9, blue: 0.95), accent: Color(red: 0.2, green: 0.6, blue: 0.85),
+                          symbols: ["cloud.bolt.fill", "wind", "tornado", "cloud.rain.fill"])
         case 4: // 伝説の獣：火山
-            top = Color(red: 0.58, green: 0.3, blue: 0.24)
-            bottom = Color(red: 0.44, green: 0.2, blue: 0.2)
-            decoration = Color(red: 1, green: 0.55, blue: 0.25)
-            accent = Color(red: 0.85, green: 0.25, blue: 0.2)
-            symbols = ["mountain.2.fill", "flame.fill", "pawprint.fill", "flame.fill"]
+            StoryMapTheme(Color(red: 0.58, green: 0.3, blue: 0.24), Color(red: 0.44, green: 0.2, blue: 0.2),
+                          decoration: Color(red: 1, green: 0.55, blue: 0.25), accent: Color(red: 0.85, green: 0.25, blue: 0.2),
+                          symbols: ["mountain.2.fill", "flame.fill", "pawprint.fill", "flame.fill"])
         default: // 覇王の城：夜
-            top = Color(red: 0.14, green: 0.08, blue: 0.3)
-            bottom = Color(red: 0.26, green: 0.14, blue: 0.42)
-            decoration = Color(red: 0.95, green: 0.85, blue: 0.5)
-            accent = Color(red: 0.6, green: 0.35, blue: 0.9)
-            symbols = ["moon.stars.fill", "sparkles", "building.columns.fill", "star.fill"]
+            StoryMapTheme(Color(red: 0.14, green: 0.08, blue: 0.3), Color(red: 0.26, green: 0.14, blue: 0.42),
+                          decoration: Color(red: 0.95, green: 0.85, blue: 0.5), accent: Color(red: 0.6, green: 0.35, blue: 0.9),
+                          symbols: ["moon.stars.fill", "sparkles", "building.columns.fill", "star.fill"])
+        }
+    }
+
+    private static func hiragana(_ chapter: Int) -> StoryMapTheme {
+        switch chapter {
+        case 1: // はじまりのあ行：こどもの国の広場
+            StoryMapTheme(Color(red: 0.62, green: 0.86, blue: 0.5), Color(red: 0.48, green: 0.76, blue: 0.4),
+                          decoration: Color(red: 1, green: 0.55, blue: 0.6), accent: Color(red: 0.95, green: 0.45, blue: 0.5),
+                          symbols: ["gift.fill", "camera.macro", "tree.fill", "star.fill"])
+        case 2: // くるくるの丘：お花畑
+            StoryMapTheme(Color(red: 0.98, green: 0.76, blue: 0.84), Color(red: 0.9, green: 0.6, blue: 0.74),
+                          decoration: Color(red: 0.75, green: 0.3, blue: 0.55), accent: Color(red: 0.85, green: 0.35, blue: 0.65),
+                          symbols: ["camera.macro", "heart.fill", "leaf.fill", "sparkle"])
+        case 3: // にごりの洞窟
+            StoryMapTheme(Color(red: 0.42, green: 0.38, blue: 0.36), Color(red: 0.3, green: 0.27, blue: 0.27),
+                          decoration: Color(red: 0.6, green: 0.85, blue: 1), accent: Color(red: 0.55, green: 0.45, blue: 0.85),
+                          symbols: ["diamond.fill", "mountain.2.fill", "drop.fill", "sparkle"])
+        case 4: // ちいさな入り江：海辺
+            StoryMapTheme(Color(red: 0.45, green: 0.78, blue: 0.95), Color(red: 0.95, green: 0.88, blue: 0.66),
+                          decoration: Color(red: 0.1, green: 0.45, blue: 0.75), accent: Color(red: 0.15, green: 0.55, blue: 0.9),
+                          symbols: ["water.waves", "fish.fill", "sun.max.fill", "drop.fill"])
+        default: // しりとりの塔：夕焼け
+            StoryMapTheme(Color(red: 0.98, green: 0.6, blue: 0.4), Color(red: 0.8, green: 0.4, blue: 0.55),
+                          decoration: Color(red: 1, green: 0.95, blue: 0.7), accent: Color(red: 0.95, green: 0.55, blue: 0.2),
+                          symbols: ["building.columns.fill", "star.fill", "sparkles", "flag.fill"])
+        }
+    }
+
+    private static func emoji(_ chapter: Int) -> StoryMapTheme {
+        switch chapter {
+        case 1: // にこにこ広場：街
+            StoryMapTheme(Color(red: 0.62, green: 0.82, blue: 0.98), Color(red: 0.5, green: 0.7, blue: 0.9),
+                          decoration: Color(red: 1, green: 0.85, blue: 0.2), accent: Color(red: 1, green: 0.7, blue: 0.1),
+                          symbols: ["face.smiling.inverse", "building.2.fill", "bubble.left.fill", "heart.fill"])
+        case 2: // どうぶつジャングル
+            StoryMapTheme(Color(red: 0.25, green: 0.6, blue: 0.3), Color(red: 0.16, green: 0.46, blue: 0.24),
+                          decoration: Color(red: 0.75, green: 0.95, blue: 0.4), accent: Color(red: 0.95, green: 0.6, blue: 0.15),
+                          symbols: ["pawprint.fill", "tree.fill", "leaf.fill", "bird.fill"])
+        case 3: // まんぷく横丁：屋台
+            StoryMapTheme(Color(red: 0.98, green: 0.72, blue: 0.4), Color(red: 0.9, green: 0.55, blue: 0.3),
+                          decoration: Color(red: 0.6, green: 0.2, blue: 0.1), accent: Color(red: 0.9, green: 0.3, blue: 0.2),
+                          symbols: ["fork.knife", "cup.and.saucer.fill", "birthday.cake.fill", "carrot.fill"])
+        case 4: // のりものハイウェイ
+            StoryMapTheme(Color(red: 0.55, green: 0.58, blue: 0.64), Color(red: 0.42, green: 0.45, blue: 0.52),
+                          decoration: Color(red: 1, green: 0.9, blue: 0.3), accent: Color(red: 0.2, green: 0.5, blue: 0.95),
+                          symbols: ["car.fill", "bicycle", "fuelpump.fill", "road.lanes"])
+        default: // 宇宙の果て
+            StoryMapTheme(Color(red: 0.04, green: 0.04, blue: 0.16), Color(red: 0.12, green: 0.08, blue: 0.3),
+                          decoration: Color(red: 0.8, green: 0.9, blue: 1), accent: Color(red: 0.45, green: 0.85, blue: 0.4),
+                          symbols: ["moon.stars.fill", "sparkles", "globe.asia.australia.fill", "star.fill"])
         }
     }
 }
@@ -445,7 +502,7 @@ struct StoryMapLayout {
 
     let width: CGFloat
     let height: CGFloat
-    /// ステージの位置（EnemyCatalog.enemies と同じ順）
+    /// ステージの位置（story.enemies と同じ順）
     let nodes: [CGPoint]
     /// スタート → ステージ → ゴールの順に並べた道
     let route: [CGPoint]
@@ -453,9 +510,12 @@ struct StoryMapLayout {
     private let bands: [Int: Band]
     private(set) var decorations: [Decoration] = []
 
-    init(width: CGFloat) {
+    let story: StoryKind
+
+    init(story: StoryKind, width: CGFloat) {
+        self.story = story
         self.width = width
-        let enemies = EnemyCatalog.enemies
+        let enemies = story.enemies
 
         // 下からの距離。章が変わるところは看板のぶん間をあける
         var fromBottom: [CGFloat] = []
@@ -479,7 +539,7 @@ struct StoryMapLayout {
         route = [CGPoint(x: width / 2, y: height + 20)] + nodes + [goal]
 
         var bands: [Int: Band] = [:]
-        for chapter in Story.chapters {
+        for chapter in story.chapters {
             guard let first = enemies.firstIndex(where: { $0.level == chapter.number }),
                   let last = enemies.lastIndex(where: { $0.level == chapter.number }) else { continue }
             let bottom = first == 0 ? height : (nodes[first].y + nodes[first - 1].y) / 2
@@ -551,8 +611,8 @@ struct StoryMapLayout {
     /// 章ごとの木や山などの飾り。道や看板にかからない場所に、毎回同じ配置で散らす
     private func makeDecorations() -> [Decoration] {
         var result: [Decoration] = []
-        let signs = Story.chapters.map { signY(for: $0.number) }
-        for chapter in Story.chapters {
+        let signs = story.chapters.map { signY(for: $0.number) }
+        for chapter in story.chapters {
             let band = band(for: chapter.number)
             let count = Int((band.bottom - band.top) / 50)
             for index in 0..<count {

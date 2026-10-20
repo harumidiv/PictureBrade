@@ -18,6 +18,8 @@ struct Enemy: Identifiable, Hashable {
     var isEmoji = false
     /// ランダム連戦で出た敵（ストーリーの撃破記録には数えない）
     var isRandom = false
+    /// どのストーリーの敵か
+    var story: StoryKind = .kanji
     /// ストーリーで登場したときのセリフ
     var intro = ""
     /// ストーリーで倒されたときのセリフ
@@ -34,13 +36,18 @@ struct Enemy: Identifiable, Hashable {
 
     /// CPU の腕前 0...1（シュートの強さや突進の頻度に影響）
     var skill: Float { Float(level - 1) / 4 }
+
+    /// 「あ」や「🙂（にっこり）」のような表示名（読みがあれば添える）
+    var displayName: String {
+        reading.isEmpty ? character : "\(character)（\(reading)）"
+    }
 }
 
 /// 敵の一覧と撃破状況
 @Observable
 final class EnemyCatalog {
-    /// ストーリーの敵（この順番で1体ずつ戦う。level が章番号）
-    static let enemies: [Enemy] = [
+    /// 漢字ストーリーの敵（この順番で1体ずつ戦う。level が章番号）
+    static let kanjiEnemies: [Enemy] = [
         // 第1章 はじまりの文字
         Enemy(character: "一", reading: "いち", level: 1, color: .systemTeal,
               intro: "オレは「一」。画数はたった1本……だが、まっすぐさなら誰にも負けん！",
@@ -155,7 +162,7 @@ final class EnemyCatalog {
                 return enemy
             }
         }
-        let fallback = Self.enemies.randomElement()!
+        let fallback = Self.kanjiEnemies.randomElement()!
         return Enemy(character: fallback.character, reading: fallback.reading, level: level, color: fallback.color, isRandom: true)
     }
 
@@ -175,37 +182,54 @@ final class EnemyCatalog {
         UserDefaults.standard.set(Array(defeated), forKey: Self.defeatedKey)
     }
 
-    static func enemy(forBladeID id: UUID) -> Enemy? {
-        enemies.first { $0.bladeID == id }
-    }
+    /// すべてのストーリーの敵
+    static let allStoryEnemies: [Enemy] = StoryKind.allCases.flatMap(\.enemies)
 
-    /// 一覧で次に並んでいる敵（最後の敵なら nil）
-    static func enemy(after enemy: Enemy) -> Enemy? {
-        guard let index = enemies.firstIndex(of: enemy), index + 1 < enemies.count else { return nil }
-        return enemies[index + 1]
+    static func enemy(forBladeID id: UUID) -> Enemy? {
+        allStoryEnemies.first { $0.bladeID == id }
     }
 
     /// ストーリーで次に戦う敵（全員倒していれば nil）
-    var nextStoryEnemy: Enemy? {
-        Self.enemies.first { !isDefeated($0) }
+    func nextStoryEnemy(in story: StoryKind) -> Enemy? {
+        story.enemies.first { !isDefeated($0) }
     }
 
     /// 倒した敵と次の敵だけが姿を見せる
     func isRevealed(_ enemy: Enemy) -> Bool {
-        isDefeated(enemy) || enemy == nextStoryEnemy
+        isDefeated(enemy) || enemy == nextStoryEnemy(in: enemy.story)
     }
 
-    var isStoryCleared: Bool { nextStoryEnemy == nil }
+    func isStoryCleared(_ story: StoryKind) -> Bool { nextStoryEnemy(in: story) == nil }
+
+    var isEveryStoryCleared: Bool { StoryKind.allCases.allSatisfy(isStoryCleared) }
+
+    func defeatedCount(in story: StoryKind) -> Int {
+        story.enemies.count { isDefeated($0) }
+    }
+
+    /// すべてのストーリーで倒した数
+    var storyDefeatedCount: Int {
+        Self.allStoryEnemies.count { isDefeated($0) }
+    }
 
     // MARK: - プロローグ
 
-    private static let prologueSeenKey = "storyPrologueSeen"
+    /// 漢字のストーリーは追加前からある記録をそのまま使う
+    private static func prologueSeenKey(_ story: StoryKind) -> String {
+        story == .kanji ? "storyPrologueSeen" : "storyPrologueSeen.\(story.rawValue)"
+    }
 
-    private(set) var hasSeenPrologue = UserDefaults.standard.bool(forKey: EnemyCatalog.prologueSeenKey)
+    private(set) var seenPrologues: Set<StoryKind> = Set(
+        StoryKind.allCases.filter { UserDefaults.standard.bool(forKey: EnemyCatalog.prologueSeenKey($0)) }
+    )
 
-    func markPrologueSeen() {
-        hasSeenPrologue = true
-        UserDefaults.standard.set(true, forKey: Self.prologueSeenKey)
+    func hasSeenPrologue(_ story: StoryKind) -> Bool {
+        seenPrologues.contains(story)
+    }
+
+    func markPrologueSeen(_ story: StoryKind) {
+        seenPrologues.insert(story)
+        UserDefaults.standard.set(true, forKey: Self.prologueSeenKey(story))
     }
 
     func image(for enemy: Enemy) -> UIImage {

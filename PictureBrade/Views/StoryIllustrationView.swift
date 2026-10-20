@@ -18,6 +18,17 @@ enum StoryIllustration {
     case faceOff(UIImage?)
     /// 文字たちが辞書へ帰っていく
     case returnToDictionary
+
+    /// 同じ場面かどうかの判定用
+    var sceneName: String {
+        switch self {
+        case .dictionaryBurst: "dictionaryBurst"
+        case .cityRampage: "cityRampage"
+        case .photoBlade: "photoBlade"
+        case .faceOff: "faceOff"
+        case .returnToDictionary: "returnToDictionary"
+        }
+    }
 }
 
 struct StoryIllustrationView: View {

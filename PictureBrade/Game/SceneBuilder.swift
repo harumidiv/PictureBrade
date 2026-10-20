@@ -17,6 +17,9 @@ struct BladeModel {
 enum SceneBuilder {
     // MARK: - Stadium
 
+    /// 外周レール（ポケット付き）の名前。BattleGame がこれを回してポケットを動かす
+    static let pocketRimName = "pocketRim"
+
     static func makeStadium() -> Entity {
         let stadium = Entity()
 
@@ -60,6 +63,10 @@ enum SceneBuilder {
         let rimHeight = StadiumGeometry.height(at: StadiumGeometry.radius)
         let segments = 96
         let baseBottom: Float = -0.3
+        // ポケットごと回せるように、レールはまとめて1つの親に付ける
+        let rim = Entity()
+        rim.name = pocketRimName
+        stadium.addChild(rim)
         for i in 0..<segments {
             let angle = Float(i) / Float(segments) * 2 * .pi
             let point = SIMD2<Float>(cos(angle), sin(angle))
@@ -72,7 +79,7 @@ enum SceneBuilder {
             )
             segment.position = [point.x * rimRadius, (top + baseBottom) / 2, point.y * rimRadius]
             segment.orientation = simd_quatf(angle: -angle, axis: [0, 1, 0])
-            stadium.addChild(segment)
+            rim.addChild(segment)
         }
 
         // 台座と床
@@ -185,8 +192,24 @@ enum SceneBuilder {
 
     // MARK: - Effects
 
+    /// ぶつかった瞬間の閃光
     static func makeSpark() -> ModelEntity {
-        let material = UnlitMaterial(color: UIColor(red: 1, green: 0.9, blue: 0.4, alpha: 1))
+        let material = UnlitMaterial(color: UIColor(red: 1, green: 0.95, blue: 0.7, alpha: 1))
         return ModelEntity(mesh: .generateSphere(radius: 0.05), materials: [material])
+    }
+
+    /// 火花1本ぶんの細長い棒（-Z 方向に伸びる。飛ぶ向きに向けて使う）
+    private static let sparkStreakMesh = MeshResource.generateBox(size: [0.014, 0.014, 0.07])
+
+    /// 火花の色。熱い白から、冷めるにつれてオレンジ・赤に変わる
+    static let sparkMaterials: [UnlitMaterial] = [
+        UIColor(red: 1, green: 1, blue: 0.9, alpha: 1),
+        UIColor(red: 1, green: 0.9, blue: 0.4, alpha: 1),
+        UIColor(red: 1, green: 0.6, blue: 0.15, alpha: 1),
+        UIColor(red: 0.95, green: 0.3, blue: 0.05, alpha: 1),
+    ].map { UnlitMaterial(color: $0) }
+
+    static func makeSparkStreak() -> ModelEntity {
+        ModelEntity(mesh: sparkStreakMesh, materials: [sparkMaterials[0]])
     }
 }

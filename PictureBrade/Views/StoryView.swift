@@ -10,6 +10,7 @@ import UIKit
 struct StoryView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(LifeManager.self) private var life
     @Environment(\.dismiss) private var dismiss
 
     @State private var playerBlade: Blade?
@@ -20,44 +21,26 @@ struct StoryView: View {
     /// バトル前の撃破数（勝って戻ってきたかの判定に使う）
     @State private var defeatedCountBeforeBattle = 0
 
-    private let cellColumns = [GridItem(.adaptive(minimum: 58), spacing: 10)]
+    /// マップで選んでいるステージ（nil ならゴール＝エンディング）
+    @State private var selectedStage: Enemy?
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    PlayerBladePicker(selection: $playerBlade)
-                    progressHeader
-                    ForEach(Story.chapters) { chapter in
-                        chapterSection(chapter)
-                    }
-                }
-                .padding(.vertical)
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    if let next = enemies.nextStoryEnemy {
-                        encounter(next)
-                    } else {
-                        dialogue = endingDialogue
-                    }
-                } label: {
-                    Text(enemies.isStoryCleared ? "エンディングを見る" : "次の相手に挑む")
-                        .font(.title3.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
-                .disabled(playerBlade == nil)
-                .padding()
-            }
+            StoryMapView(
+                playerImage: playerImage,
+                playerTint: playerBlade?.tint.color ?? .gray,
+                selection: $selectedStage
+            )
+            .safeAreaInset(edge: .bottom) { departurePanel }
             .background(Theme.background.ignoresSafeArea())
             .navigationTitle("ストーリー")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("戻る") { dismiss() }
+                }
+                ToolbarItem(placement: .principal) {
+                    progressHeader
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("プロローグ", systemImage: "book") {
@@ -68,10 +51,14 @@ struct StoryView: View {
             .onAppear {
                 // プロローグの挿絵に自分のコマを使うため、先に選んでおく
                 playerBlade = playerBlade ?? store.allBlades.first
+                selectedStage = enemies.nextStoryEnemy
                 if !enemies.hasSeenPrologue {
                     dialogue = prologueDialogue
                     enemies.markPrologueSeen()
                 }
+            }
+            .onChange(of: enemies.nextStoryEnemy) { _, next in
+                selectedStage = next
             }
             .fullScreenCover(item: $dialogue, onDismiss: startPendingBattle) { dialogue in
                 DialogueView(dialogue: dialogue) {
@@ -88,86 +75,130 @@ struct StoryView: View {
     // MARK: - 進行状況
 
     private var progressHeader: some View {
-        HStack {
-            Text("撃破 \(enemies.defeated.count)/\(EnemyCatalog.enemies.count)")
-                .font(.headline)
-                .foregroundStyle(Theme.gold)
-            Spacer()
+        HStack(spacing: 6) {
             if enemies.isStoryCleared {
-                Label("全クリア！", systemImage: "crown.fill")
-                    .font(.headline)
-                    .foregroundStyle(Theme.gold)
+                Image(systemName: "crown.fill")
             }
+            Text("撃破 \(enemies.defeated.count)/\(EnemyCatalog.enemies.count)")
         }
-        .padding(.horizontal)
+        .font(.headline)
+        .foregroundStyle(Theme.gold)
     }
 
-    private func chapterSection(_ chapter: StoryChapter) -> some View {
-        // 章の最初の相手に出会うまでは章タイトルも隠す
-        let isReached = chapter.enemies.contains { enemies.isRevealed($0) }
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("第\(chapter.number)章　\(isReached ? chapter.title : "？？？")")
-                .font(.headline)
-                .foregroundStyle(isReached ? .white : .white.opacity(0.4))
-            LazyVGrid(columns: cellColumns, spacing: 10) {
-                ForEach(chapter.enemies) { enemy in
-                    enemyCell(enemy)
+    // MARK: - 出陣パネル
+
+    /// 選んだステージの情報・コマ選び・出陣ボタン
+    private var departurePanel: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("ライフ")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white.opacity(0.7))
+                LifeIndicator()
+                Spacer()
+            }
+            stageInfo
+            bladeStrip
+            // ライフが時間で回復したらボタンが戻るよう、1秒ごとに見直す
+            TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                if selectedStage != nil, life.lives(at: timeline.date) == 0 {
+                    VStack(spacing: 8) {
+                        Text("ライフがありません。回復を待つか、広告を見て回復しよう")
+                            .font(.footnote)
+                            .foregroundStyle(.white.opacity(0.8))
+                        LifeRefillButton()
+                    }
+                } else {
+                    departureButton
                 }
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(.white.opacity(isReached ? 0.08 : 0.03)))
-        .padding(.horizontal)
+        .padding(16)
+        .background(
+            UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24)
+                .fill(Color(red: 0.08, green: 0.05, blue: 0.18))
+                .ignoresSafeArea(edges: .bottom)
+        )
+    }
+
+    private var departureButton: some View {
+        Button {
+            if let selectedStage {
+                encounter(selectedStage)
+            } else {
+                dialogue = endingDialogue
+            }
+        } label: {
+            Text(departureTitle)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Theme.accent)
+        .disabled(selectedStage != nil && playerBlade == nil)
+    }
+
+    private var departureTitle: String {
+        guard let selectedStage else { return "エンディングを見る" }
+        return enemies.isDefeated(selectedStage) ? "もう一度戦う" : "いざ出陣！！"
     }
 
     @ViewBuilder
-    private func enemyCell(_ enemy: Enemy) -> some View {
-        let isDefeated = enemies.isDefeated(enemy)
-        let isNext = enemy == enemies.nextStoryEnemy
-        Button {
-            // 倒した相手とは再戦できる（進行には影響しない）
-            if isDefeated { encounter(enemy) }
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.white.opacity(isDefeated ? 0.15 : 0.06))
-                if isDefeated {
-                    Text(enemy.character)
-                        .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundStyle(Color(enemy.color))
-                } else {
-                    // 次の相手もまだ姿は見せない
-                    Text("？")
-                        .font(.system(size: 26, weight: .black, design: .rounded))
-                        .foregroundStyle(isNext ? Theme.gold : .white.opacity(0.25))
+    private var stageInfo: some View {
+        HStack(spacing: 10) {
+            if let stage = selectedStage {
+                let chapter = Story.chapter(for: stage)
+                let number = (chapter?.enemies.firstIndex(of: stage) ?? 0) + 1
+                let isDefeated = enemies.isDefeated(stage)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("第\(stage.level)章  ステージ\(number)")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white.opacity(0.7))
+                    // 倒すまでは相手の姿を見せない
+                    Text(isDefeated ? "\(stage.character)（\(stage.reading)）" : "？？？")
+                        .font(.title3.weight(.black))
+                        .foregroundStyle(.white)
                 }
+                Spacer()
+                Text(isDefeated ? "CLEAR" : "NEXT")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(isDefeated ? .white : .black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(isDefeated ? Color.green : Theme.gold))
+            } else {
+                Text("覇王の城を取り戻した！")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(Theme.gold)
+                Spacer()
             }
-            .frame(height: 58)
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isNext ? Theme.gold : .clear, lineWidth: 3))
-            .overlay(alignment: .topTrailing) {
-                if isDefeated {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green, .white)
-                        .offset(x: 6, y: -6)
-                } else if !isNext {
-                    Image(systemName: "lock.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
-                        .padding(4)
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if isNext {
-                    Text("NEXT")
-                        .font(.system(size: 9, weight: .heavy))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 5)
-                        .background(Capsule().fill(Theme.gold))
-                        .offset(y: 6)
+        }
+    }
+
+    /// 戦うコマを選ぶ
+    @ViewBuilder
+    private var bladeStrip: some View {
+        if store.allBlades.isEmpty {
+            Text("ホーム画面でコマを作ってから挑もう")
+                .font(.footnote)
+                .foregroundStyle(.white.opacity(0.7))
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(store.allBlades) { blade in
+                        Button {
+                            playerBlade = blade
+                        } label: {
+                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46)
+                                .overlay(Circle().stroke(Theme.gold, lineWidth: playerBlade?.id == blade.id ? 3 : 0).padding(-4))
+                                .padding(5)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
-        .disabled(!isDefeated)
     }
 
     // MARK: - 会話
@@ -194,13 +225,9 @@ struct StoryView: View {
     }
 
     private var endingDialogue: StoryDialogue {
-        let lines = Story.ending.enumerated().map { index, text in
-            DialogueLine(
-                heading: index == 0 ? "エンディング" : nil,
-                text: text,
-                // 「文字たちは辞書の中へ帰っていく」の場面
-                illustration: index == 1 ? .returnToDictionary : nil
-            )
+        // 見出しは出さず、最初から文字たちが辞書へ帰っていく場面を流し続ける
+        let lines = Story.ending.map { text in
+            DialogueLine(text: text, illustration: .returnToDictionary)
         }
         return StoryDialogue(lines: lines, finishTitle: "おわり")
     }

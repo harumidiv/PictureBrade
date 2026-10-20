@@ -20,16 +20,27 @@ nonisolated enum BladeImageProcessor {
         var tint: RGBColor
     }
 
+    struct Prepared {
+        var image: UIImage
+        /// 被写体が見つからず丸く切り抜いた（性能ダウン）
+        var isRoughCut: Bool
+    }
+
+    /// 丸く切り抜いたコマの性能。
+    /// 丸は形の計算だと防御・持久が最大になってしまうため、形を使わず全体を低めに固定する
+    static let roughCutStats = BladeStats(attack: 0.3, defense: 0.3, stamina: 0.3, speed: 0.3)
+
     // MARK: - Preparation
 
     /// 透過画像（iOSの「被写体を持ち上げる」でコピーしたもの等）はそのまま、
     /// 背景のある写真は Vision で被写体を自動切り抜きする。
-    static func prepare(_ image: UIImage) async throws -> UIImage {
+    static func prepare(_ image: UIImage) async throws -> Prepared {
         try await Task.detached(priority: .userInitiated) {
             let upright = redraw(image, maxDimension: 1024)
             guard let cgImage = upright.cgImage else { throw ProcessingError.invalidImage }
 
             let cutout: CGImage
+            var isRoughCut = false
             if hasTransparency(cgImage) {
                 cutout = cgImage
             } else if let lifted = liftSubject(from: cgImage) {
@@ -37,9 +48,10 @@ nonisolated enum BladeImageProcessor {
             } else {
                 // 被写体が見つからない場合は丸く切り抜いて使う
                 cutout = circleCrop(cgImage)
+                isRoughCut = true
             }
             guard let trimmed = trimTransparentEdges(cutout) else { throw ProcessingError.invalidImage }
-            return squareFit(trimmed)
+            return Prepared(image: squareFit(trimmed), isRoughCut: isRoughCut)
         }.value
     }
 
@@ -102,12 +114,12 @@ nonisolated enum BladeImageProcessor {
 
     // MARK: - Analysis
 
-    static func analyze(_ image: UIImage) -> Analysis {
+    static func analyze(_ image: UIImage, isRoughCut: Bool = false) -> Analysis {
         guard let cgImage = image.cgImage else {
-            return Analysis(stats: .balanced, tint: BladeAnalyzer.defaultTint)
+            return Analysis(stats: isRoughCut ? roughCutStats : .balanced, tint: BladeAnalyzer.defaultTint)
         }
         let result = BladeAnalyzer.analyze(cgImage)
-        return Analysis(stats: result.stats, tint: result.tint)
+        return Analysis(stats: isRoughCut ? roughCutStats : result.stats, tint: result.tint)
     }
 
     // MARK: - Helpers

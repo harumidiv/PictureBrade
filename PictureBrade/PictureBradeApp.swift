@@ -11,7 +11,7 @@ import SwiftUI
 struct PictureBradeApp: App {
     @State private var store = BladeStore()
     @State private var enemies = EnemyCatalog()
-    @State private var rewardedAds = RewardedAdManager()
+    @State private var rewardedAds = RewardedAds()
     @State private var gameCenter = GameCenterManager()
     @State private var life = LifeManager()
     @State private var didStartServices = false

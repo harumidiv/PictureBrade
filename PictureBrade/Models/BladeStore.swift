@@ -43,9 +43,9 @@ final class BladeStore {
     }
 
     @discardableResult
-    func add(name: String, image: UIImage, credit: PhotoCredit? = nil) -> Blade? {
+    func add(name: String, image: UIImage, isRoughCut: Bool = false, credit: PhotoCredit? = nil) -> Blade? {
         guard let data = image.pngData() else { return nil }
-        let analysis = BladeImageProcessor.analyze(image)
+        let analysis = BladeImageProcessor.analyze(image, isRoughCut: isRoughCut)
         let id = UUID()
         let fileName = "\(id.uuidString).png"
         do {

@@ -49,6 +49,43 @@ struct BladeBadge: View {
     }
 }
 
+/// ステージの星（★1〜★3）。animated なら1つずつ跳ねながら出てくる
+struct StarRating: View {
+    let stars: Int
+    var size: CGFloat = 14
+    var animated = false
+
+    @State private var shown = 0
+
+    var body: some View {
+        HStack(spacing: size * 0.12) {
+            ForEach(0..<3, id: \.self) { index in
+                let isOn = index < stars && (!animated || index < shown)
+                Image(systemName: "star.fill")
+                    .font(.system(size: size, weight: .bold))
+                    .foregroundStyle(isOn ? Theme.gold : Color.black.opacity(0.35))
+                    .overlay(
+                        Image(systemName: "star")
+                            .font(.system(size: size, weight: .bold))
+                            .foregroundStyle(.white.opacity(isOn ? 0.9 : 0.5))
+                    )
+                    .shadow(color: isOn ? Theme.gold.opacity(0.7) : .clear, radius: size * 0.2)
+                    .scaleEffect(isOn ? 1 : (animated ? 0.85 : 1))
+                    // 真ん中の星を少し大きく、上にずらして王冠のように並べる
+                    .scaleEffect(index == 1 ? 1.2 : 1)
+                    .offset(y: index == 1 ? -size * 0.15 : 0)
+            }
+        }
+        .task {
+            guard animated else { return }
+            for index in 1...max(stars, 1) {
+                try? await Task.sleep(for: .seconds(0.35))
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.45)) { shown = index }
+            }
+        }
+    }
+}
+
 struct StatBar: View {
     let label: String
     let value: Double

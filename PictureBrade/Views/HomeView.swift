@@ -47,7 +47,7 @@ struct HomeView: View {
             }
             .fullScreenCover(item: $battleMode, onDismiss: requestReviewIfNeeded) { mode in
                 switch mode {
-                case .story: StoryView()
+                case .story: StorySelectView()
                 case .endless: EndlessSetupView()
                 }
             }
@@ -100,10 +100,10 @@ struct HomeView: View {
             } label: {
                 ModeButtonLabel(
                     title: "ストーリー",
-                    caption: enemies.isStoryCleared ? "全クリア！" : "撃破 \(enemies.defeated.count)/\(EnemyCatalog.enemies.count)",
+                    caption: enemies.isEveryStoryCleared ? "全クリア！" : "撃破 \(enemies.storyDefeatedCount)/\(EnemyCatalog.allStoryEnemies.count)",
                     systemImage: "map.fill"
                 ) {
-                    LifeIndicator()
+                    EmptyView()
                 }
             }
             .buttonStyle(GameButtonStyle(color: Theme.accent))

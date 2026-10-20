@@ -38,16 +38,16 @@ struct LifeIndicator: View {
 /// 広告を見てライフを1つ回復するボタン
 struct LifeRefillButton: View {
     @Environment(LifeManager.self) private var life
-    @Environment(RewardedAdManager.self) private var rewardedAds
+    @Environment(RewardedAds.self) private var rewardedAds
 
     var body: some View {
         Button {
-            rewardedAds.show { earned in
+            rewardedAds.lifeRefill.show { earned in
                 if earned { life.recoverOne() }
             }
         } label: {
             HStack(spacing: 8) {
-                if rewardedAds.isReady {
+                if rewardedAds.lifeRefill.isReady {
                     Image(systemName: "play.rectangle.fill")
                 } else {
                     ProgressView().tint(.white)
@@ -61,7 +61,7 @@ struct LifeRefillButton: View {
         .buttonStyle(.borderedProminent)
         .tint(Theme.gold.opacity(0.85))
         .foregroundStyle(.black)
-        .disabled(!rewardedAds.isReady)
-        .onAppear { rewardedAds.load() }
+        .disabled(!rewardedAds.lifeRefill.isReady)
+        .onAppear { rewardedAds.lifeRefill.load() }
     }
 }

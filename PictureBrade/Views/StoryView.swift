@@ -11,7 +11,8 @@ struct StoryView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(LifeManager.self) private var life
-    @Environment(\.dismiss) private var dismiss
+
+    let story: StoryKind
 
     @State private var playerBlade: Blade?
     @State private var battle: BattleGame?
@@ -25,20 +26,17 @@ struct StoryView: View {
     @State private var selectedStage: Enemy?
 
     var body: some View {
-        NavigationStack {
-            StoryMapView(
+        StoryMapView(
+                story: story,
                 playerImage: playerImage,
                 playerTint: playerBlade?.tint.color ?? .gray,
                 selection: $selectedStage
             )
             .safeAreaInset(edge: .bottom) { departurePanel }
             .background(Theme.background.ignoresSafeArea())
-            .navigationTitle("ストーリー")
+            .navigationTitle(story.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("戻る") { dismiss() }
-                }
                 ToolbarItem(placement: .principal) {
                     progressHeader
                 }
@@ -51,13 +49,13 @@ struct StoryView: View {
             .onAppear {
                 // プロローグの挿絵に自分のコマを使うため、先に選んでおく
                 playerBlade = playerBlade ?? store.allBlades.first
-                selectedStage = enemies.nextStoryEnemy
-                if !enemies.hasSeenPrologue {
+                selectedStage = enemies.nextStoryEnemy(in: story)
+                if !enemies.hasSeenPrologue(story) {
                     dialogue = prologueDialogue
-                    enemies.markPrologueSeen()
+                    enemies.markPrologueSeen(story)
                 }
             }
-            .onChange(of: enemies.nextStoryEnemy) { _, next in
+            .onChange(of: enemies.nextStoryEnemy(in: story)) { _, next in
                 selectedStage = next
             }
             .fullScreenCover(item: $dialogue, onDismiss: startPendingBattle) { dialogue in
@@ -69,17 +67,16 @@ struct StoryView: View {
             .fullScreenCover(item: $battle, onDismiss: afterBattle) { game in
                 BattleView(game: game)
             }
-        }
     }
 
     // MARK: - 進行状況
 
     private var progressHeader: some View {
         HStack(spacing: 6) {
-            if enemies.isStoryCleared {
+            if enemies.isStoryCleared(story) {
                 Image(systemName: "crown.fill")
             }
-            Text("撃破 \(enemies.defeated.count)/\(EnemyCatalog.enemies.count)")
+            Text("撃破 \(enemies.defeatedCount(in: story))/\(story.enemies.count)")
         }
         .font(.headline)
         .foregroundStyle(Theme.gold)
@@ -148,7 +145,7 @@ struct StoryView: View {
     private var stageInfo: some View {
         HStack(spacing: 10) {
             if let stage = selectedStage {
-                let chapter = Story.chapter(for: stage)
+                let chapter = story.chapter(for: stage)
                 let number = (chapter?.enemies.firstIndex(of: stage) ?? 0) + 1
                 let isDefeated = enemies.isDefeated(stage)
                 VStack(alignment: .leading, spacing: 2) {
@@ -156,19 +153,23 @@ struct StoryView: View {
                         .font(.caption.bold())
                         .foregroundStyle(.white.opacity(0.7))
                     // 倒すまでは相手の姿を見せない
-                    Text(isDefeated ? "\(stage.character)（\(stage.reading)）" : "？？？")
+                    Text(isDefeated ? stage.displayName : "？？？")
                         .font(.title3.weight(.black))
                         .foregroundStyle(.white)
                 }
                 Spacer()
-                Text(isDefeated ? "CLEAR" : "NEXT")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(isDefeated ? .white : .black)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(isDefeated ? Color.green : Theme.gold))
+                if isDefeated {
+                    StarRating(stars: enemies.stars(for: stage), size: 22)
+                } else {
+                    Text("NEXT")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Theme.gold))
+                }
             } else {
-                Text("覇王の城を取り戻した！")
+                Text(story.clearedTitle)
                     .font(.title3.weight(.black))
                     .foregroundStyle(Theme.gold)
                 Spacer()
@@ -209,12 +210,12 @@ struct StoryView: View {
 
     private var prologueDialogue: StoryDialogue {
         let illustrations: [StoryIllustration] = [
-            .dictionaryBurst,
-            .cityRampage,
+            .dictionaryBurst(story),
+            .cityRampage(story),
             .photoBlade(playerImage),
             .faceOff(playerImage),
         ]
-        let lines = Story.prologue.enumerated().map { index, text in
+        let lines = story.prologue.enumerated().map { index, text in
             DialogueLine(
                 heading: index == 0 ? "プロローグ" : nil,
                 text: text,
@@ -225,9 +226,9 @@ struct StoryView: View {
     }
 
     private var endingDialogue: StoryDialogue {
-        // 見出しは出さず、最初から文字たちが辞書へ帰っていく場面を流し続ける
-        let lines = Story.ending.map { text in
-            DialogueLine(text: text, illustration: .returnToDictionary)
+        // 見出しは出さず、最初から文字たちが元の場所へ帰っていく場面を流し続ける
+        let lines = story.ending.map { text in
+            DialogueLine(text: text, illustration: .returnToDictionary(story))
         }
         return StoryDialogue(lines: lines, finishTitle: "おわり")
     }
@@ -237,14 +238,14 @@ struct StoryView: View {
         let blade = enemies.blade(for: enemy)
         var lines: [DialogueLine] = []
         let isRematch = enemies.isDefeated(enemy)
-        if let chapter = Story.chapter(for: enemy), chapter.enemies.first == enemy, !isRematch {
+        if let chapter = story.chapter(for: enemy), chapter.enemies.first == enemy, !isRematch {
             lines.append(DialogueLine(heading: "第\(chapter.number)章\n\(chapter.title)", text: chapter.intro))
         }
         if !isRematch {
             lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
         }
         lines.append(DialogueLine(
-            speaker: "\(blade.name)（\(enemy.reading)）Lv.\(enemy.level)",
+            speaker: blade.name + (enemy.reading.isEmpty ? "" : "（\(enemy.reading)）") + " Lv.\(enemy.level)",
             text: enemy.intro,
             portrait: enemies.image(for: enemy),
             portraitTint: blade.tint.color
@@ -267,7 +268,7 @@ struct StoryView: View {
     /// 新しく相手を倒して戻ってきたら、そのまま次の相手の登場シーン（全員倒したらエンディング）へ
     private func afterBattle() {
         guard enemies.defeated.count > defeatedCountBeforeBattle else { return }
-        if let next = enemies.nextStoryEnemy {
+        if let next = enemies.nextStoryEnemy(in: story) {
             encounter(next)
         } else {
             dialogue = endingDialogue

@@ -10,7 +10,7 @@ import UIKit
 struct BattleView: View {
     let game: BattleGame
     @Environment(EnemyCatalog.self) private var enemies
-    @Environment(RewardedAdManager.self) private var rewardedAds
+    @Environment(RewardedAds.self) private var rewardedAds
     @Environment(GameCenterManager.self) private var gameCenter
     @Environment(LifeManager.self) private var life
     @Environment(\.dismiss) private var dismiss
@@ -19,7 +19,6 @@ struct BattleView: View {
     @State private var drag: CGSize?
     /// この試合ですでにライフを減らしたか（二重に減らさないため）
     @State private var lifeCharged = false
-    @State private var confirmQuit = false
 
     var body: some View {
         ZStack {
@@ -48,15 +47,6 @@ struct BattleView: View {
             overlayMessage
         }
         .statusBarHidden()
-        .alert("試合をやめますか？", isPresented: $confirmQuit) {
-            Button("やめる", role: .destructive) {
-                chargeLife()
-                dismiss()
-            }
-            Button("続ける", role: .cancel) {}
-        } message: {
-            Text("途中でやめると負けになり、ライフが1つ減ります")
-        }
         .onChange(of: game.phase) { _, phase in
             // ストーリーで負けたらライフを1つ減らす
             if game.mode == .story, phase == .matchOver(playerWon: false) {
@@ -66,7 +56,7 @@ struct BattleView: View {
             ReviewPrompt.recordWin()
             switch game.mode {
             case .story:
-                enemies.markDefeated(bladeID: game.cpu.id)
+                enemies.markDefeated(bladeID: game.cpu.id, stars: game.earnedStars)
             case .endless:
                 enemies.recordStreak(game.winStreak)
                 gameCenter.submitEndless(streak: game.winStreak)
@@ -101,20 +91,6 @@ struct BattleView: View {
             .foregroundStyle(.white)
             .frame(width: 90)
             spinGauge(blade: game.cpu, image: game.cpuImage, spin: game.cpuSpin, score: game.cpuScore, color: Theme.accent)
-        }
-        .overlay(alignment: .topLeading) {
-            Button {
-                if isStoryMatchInProgress {
-                    confirmQuit = true
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .offset(y: -8)
         }
     }
 
@@ -264,13 +240,6 @@ struct BattleView: View {
 
     // MARK: - ライフ（ストーリー）
 
-    /// ストーリーで、シュートしてから決着がつくまでの間
-    private var isStoryMatchInProgress: Bool {
-        guard game.mode == .story, game.hasLaunched, !lifeCharged else { return false }
-        if case .matchOver = game.phase { return false }
-        return true
-    }
-
     private func chargeLife() {
         guard game.mode == .story, !lifeCharged else { return }
         lifeCharged = true
@@ -295,6 +264,12 @@ struct BattleView: View {
         let defeatLine = EnemyCatalog.enemy(forBladeID: game.cpu.id)?.defeat ?? ""
         return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！") {
             VStack(spacing: 12) {
+                VStack(spacing: 4) {
+                    StarRating(stars: game.earnedStars, size: 40, animated: true)
+                    Text("\(game.playerScore) - \(game.cpuScore)" + (game.earnedStars == 3 ? "  パーフェクト！" : "  1点も取られずに勝つと★3"))
+                        .font(.caption.bold())
+                        .foregroundStyle(game.earnedStars == 3 ? Theme.gold : .white.opacity(0.7))
+                }
                 if !defeatLine.isEmpty {
                     Text("\(game.cpu.name)「\(defeatLine)」")
                         .font(.subheadline)
@@ -351,18 +326,18 @@ struct BattleView: View {
     /// 広告を最後まで見たら、連勝を引き継いで同じ相手に再挑戦
     private var continueButton: some View {
         Button {
-            rewardedAds.show { earned in
+            rewardedAds.continuation.show { earned in
                 if earned { game.continueAfterLoss() }
             }
         } label: {
             HStack(spacing: 8) {
-                if rewardedAds.isReady {
+                if rewardedAds.continuation.isReady {
                     Image(systemName: "play.rectangle.fill")
                 } else {
                     ProgressView().tint(.white)
                 }
                 VStack(spacing: 0) {
-                    Text(rewardedAds.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
+                    Text(rewardedAds.continuation.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
                         .font(.headline)
                     Text("\(game.streakBeforeLoss)連勝を引き継いで再挑戦（1回まで）")
                         .font(.caption2)
@@ -374,8 +349,8 @@ struct BattleView: View {
         .buttonStyle(.borderedProminent)
         .tint(Theme.gold)
         .foregroundStyle(.black)
-        .disabled(!rewardedAds.isReady)
-        .onAppear { rewardedAds.load() }
+        .disabled(!rewardedAds.continuation.isReady)
+        .onAppear { rewardedAds.continuation.load() }
     }
 
     private func challenge(_ enemy: Enemy) {

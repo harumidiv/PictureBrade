@@ -14,6 +14,7 @@ struct AddBladeView: View {
 
     @State private var photoItem: PhotosPickerItem?
     @State private var preview: UIImage?
+    @State private var isRoughCut = false
     @State private var name = ""
     @State private var isProcessing = false
     @State private var errorMessage: String?
@@ -21,7 +22,7 @@ struct AddBladeView: View {
     @State private var isSearchingPexels = false
 
     private var analysis: BladeImageProcessor.Analysis? {
-        preview.map(BladeImageProcessor.analyze)
+        preview.map { BladeImageProcessor.analyze($0, isRoughCut: isRoughCut) }
     }
 
     var body: some View {
@@ -37,6 +38,7 @@ struct AddBladeView: View {
                         CreditLabel(credit: credit)
                     }
                     sources
+                    StatGuideView()
                     howTo
                 }
                 .padding()
@@ -51,7 +53,7 @@ struct AddBladeView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         if let preview {
-                            store.add(name: name, image: preview, credit: credit)
+                            store.add(name: name, image: preview, isRoughCut: isRoughCut, credit: credit)
                             dismiss()
                         }
                     }
@@ -96,6 +98,12 @@ struct AddBladeView: View {
                         .foregroundStyle(Theme.gold)
                     StatsView(stats: analysis.stats)
                         .frame(maxWidth: 260)
+                    if isRoughCut {
+                        Label("うまく切り抜けなかったので性能ダウン…\n被写体がはっきり写った写真か、iOSの切り抜き機能を使うと本気の性能になるよ", systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .padding()
             } else {
@@ -157,9 +165,6 @@ struct AddBladeView: View {
                 .font(.headline)
             Text("1. 写真アプリで被写体を長押し\n2. 「コピー」を選ぶ（またはそのままこの画面にドラッグ）\n3. 「コピーした切り抜きを貼り付け」をタップ")
                 .font(.footnote)
-            Text("形がトゲトゲ→攻撃、大きい→防御、丸くて空気抵抗が少ない→持久、色が鮮やか→機動 がアップ！")
-                .font(.footnote)
-                .foregroundStyle(Theme.gold)
         }
         .foregroundStyle(.white.opacity(0.85))
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -189,7 +194,9 @@ struct AddBladeView: View {
         errorMessage = nil
         defer { isProcessing = false }
         do {
-            preview = try await BladeImageProcessor.prepare(image)
+            let prepared = try await BladeImageProcessor.prepare(image)
+            preview = prepared.image
+            isRoughCut = prepared.isRoughCut
         } catch {
             errorMessage = "画像を処理できませんでした"
         }

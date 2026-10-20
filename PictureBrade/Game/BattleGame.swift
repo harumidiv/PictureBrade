@@ -72,10 +72,11 @@ final class BattleGame {
     private(set) var cpuSkill: Float
 
     private(set) var phase: Phase = .loading
-    /// この試合で一度でもシュートしたか（途中でやめたときにライフを減らすかの判定に使う）
-    private(set) var hasLaunched = false
     private(set) var playerScore = 0
     private(set) var cpuScore = 0
+
+    /// ストーリーで勝ったときの星（相手に取られた点が少ないほど多い。3-0 で★3、3-1 で★2、3-2 で★1）
+    var earnedStars: Int { max(1, 3 - cpuScore) }
     private(set) var round = 1
     /// 連勝数（負けると 0 に戻る）
     private(set) var winStreak = 0
@@ -224,7 +225,6 @@ final class BattleGame {
         tops[Self.cpuIndex].spin = 0.55 + 0.45 * cpuPower
 
         phase = .battle
-        hasLaunched = true
         haptics.impactOccurred(intensity: CGFloat(power))
     }
 
@@ -271,7 +271,6 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
-        hasLaunched = false
         resetRound()
     }
 
@@ -283,7 +282,6 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
-        hasLaunched = false
         resetRound()
     }
 
@@ -298,7 +296,6 @@ final class BattleGame {
         playerScore = 0
         cpuScore = 0
         round = 1
-        hasLaunched = false
         resetRound()
     }
 

@@ -159,12 +159,15 @@ private struct HomeBackground: View {
                     // 放射状の光（ゆっくり回る）
                     AngularGradient(
                         stops: (0..<24).flatMap { index -> [Gradient.Stop] in
+                            // 足し算だと誤差で次の筋の始まりより少し大きくなり、順番が崩れるので割り算で出す
                             let start = Double(index) / 24
+                            let middle = Double(index * 2 + 1) / 48
+                            let end = Double(index + 1) / 24
                             return [
                                 .init(color: .white.opacity(0.07), location: start),
-                                .init(color: .white.opacity(0.07), location: start + 1 / 48),
-                                .init(color: .clear, location: start + 1 / 48),
-                                .init(color: .clear, location: start + 1 / 24),
+                                .init(color: .white.opacity(0.07), location: middle),
+                                .init(color: .clear, location: middle),
+                                .init(color: .clear, location: end),
                             ]
                         },
                         center: .center

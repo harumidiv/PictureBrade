@@ -120,7 +120,7 @@ struct StoryMapView: View {
                     LinearGradient(
                         stops: [
                             .init(color: .black, location: 0),
-                            .init(color: .black, location: (height - overlap) / height),
+                            .init(color: .black, location: height > 0 ? min(max((height - overlap) / height, 0), 1) : 1),
                             .init(color: .clear, location: 1),
                         ],
                         startPoint: .top, endPoint: .bottom

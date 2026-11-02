@@ -54,7 +54,8 @@ final class RewardedAdManager: NSObject, FullScreenContentDelegate {
         guard ad == nil, !isLoading else { return }
         isLoading = true
         RewardedAd.load(with: unitID, request: Request()) { [weak self] ad, _ in
-            Task { @MainActor in
+            // weak self の変数を Task の中から直接参照せず、Task を作る時点の値を捕まえる
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.isLoading = false
                 self.ad = ad

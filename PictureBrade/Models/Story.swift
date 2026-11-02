@@ -75,6 +75,11 @@ enum StoryKind: String, CaseIterable, Identifiable, Hashable {
     func chapter(for enemy: Enemy) -> StoryChapter? {
         chapters.first { $0.number == enemy.level }
     }
+
+    /// 章の最後の相手（マップで王冠がつくボス）か
+    func isBoss(_ enemy: Enemy) -> Bool {
+        enemies.last { $0.level == enemy.level } == enemy
+    }
 }
 
 /// ストーリーモードの章（章番号 = 敵のレベル）

@@ -245,7 +245,7 @@ struct StoryMapView: View {
                 label: "\(enemy.level)-\(number)",
                 status: status,
                 stars: enemies.stars(for: enemy),
-                isBoss: enemy == chapterEnemies.last,
+                isBoss: story.isBoss(enemy),
                 isSelected: selection == enemy,
                 accent: StoryMapTheme(story: story, chapter: enemy.level).accent
             ) {

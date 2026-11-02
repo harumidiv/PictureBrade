@@ -21,6 +21,8 @@ struct StoryView: View {
     @State private var pendingBattle: Enemy?
     /// バトル前の撃破数（勝って戻ってきたかの判定に使う）
     @State private var defeatedCountBeforeBattle = 0
+    /// 勝利後に「ストーリーを進める」を選んだか（やめるを選んだら次の相手を出さない）
+    @State private var advanceStoryAfterBattle = false
 
     /// マップで選んでいるステージ（nil ならゴール＝エンディング）
     @State private var selectedStage: Enemy?
@@ -59,13 +61,16 @@ struct StoryView: View {
                 selectedStage = next
             }
             .fullScreenCover(item: $dialogue, onDismiss: startPendingBattle) { dialogue in
-                DialogueView(dialogue: dialogue) {
+                DialogueView(dialogue: dialogue, onCancel: {
+                    pendingBattle = nil
+                    self.dialogue = nil
+                }, onFinish: {
                     pendingBattle = dialogue.battleEnemy
                     self.dialogue = nil
-                }
+                })
             }
             .fullScreenCover(item: $battle, onDismiss: afterBattle) { game in
-                BattleView(game: game)
+                BattleView(game: game, onAdvanceStory: { advanceStoryAfterBattle = true })
             }
     }
 
@@ -242,7 +247,17 @@ struct StoryView: View {
             lines.append(DialogueLine(heading: "第\(chapter.number)章\n\(chapter.title)", text: chapter.intro))
         }
         if !isRematch {
-            lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+            if story.isBoss(enemy) {
+                // ボス（王冠の相手）は、黒いシルエットがズシンズシンと近づいてから正体を見せる
+                lines.append(DialogueLine(
+                    text: "……何者かが近づいてくる。",
+                    portrait: enemies.image(for: enemy),
+                    portraitTint: blade.tint.color,
+                    silhouette: true
+                ))
+            } else {
+                lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+            }
         }
         lines.append(DialogueLine(
             speaker: blade.name + (enemy.reading.isEmpty ? "" : "（\(enemy.reading)）") + " Lv.\(enemy.level)",
@@ -250,7 +265,7 @@ struct StoryView: View {
             portrait: enemies.image(for: enemy),
             portraitTint: blade.tint.color
         ))
-        dialogue = StoryDialogue(lines: lines, finishTitle: "バトル開始！", battleEnemy: enemy)
+        dialogue = StoryDialogue(lines: lines, finishTitle: "バトル開始！", battleEnemy: enemy, cancelTitle: "逃げる")
     }
 
     private func startPendingBattle() {
@@ -258,6 +273,7 @@ struct StoryView: View {
         pendingBattle = nil
         guard let playerBlade, let playerImage = store.image(for: playerBlade) else { return }
         defeatedCountBeforeBattle = enemies.defeated.count
+        advanceStoryAfterBattle = false
         battle = BattleGame(
             player: playerBlade, playerImage: playerImage,
             cpu: enemies.blade(for: enemy), cpuImage: enemies.image(for: enemy),
@@ -265,9 +281,9 @@ struct StoryView: View {
         )
     }
 
-    /// 新しく相手を倒して戻ってきたら、そのまま次の相手の登場シーン（全員倒したらエンディング）へ
+    /// 新しく相手を倒して「ストーリーを進める」で戻ってきたら、そのまま次の相手の登場シーン（全員倒したらエンディング）へ
     private func afterBattle() {
-        guard enemies.defeated.count > defeatedCountBeforeBattle else { return }
+        guard advanceStoryAfterBattle, enemies.defeated.count > defeatedCountBeforeBattle else { return }
         if let next = enemies.nextStoryEnemy(in: story) {
             encounter(next)
         } else {

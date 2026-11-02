@@ -20,6 +20,8 @@ struct BattleView: View {
     /// この試合ですでにライフを減らしたか（二重に減らさないため）
     @State private var lifeCharged = false
     @State private var confirmQuit = false
+    /// ストーリーで勝利後「ストーリーを進める」を選んだときに呼ぶ（やめるを選んだときは呼ばない）
+    var onAdvanceStory: () -> Void = {}
 
     var body: some View {
         ZStack {
@@ -219,17 +221,16 @@ struct BattleView: View {
                         if game.canContinue {
                             continueButton
                         }
-                        HStack {
-                            Button("最初から") {
-                                game.resetRun()
-                                challenge(enemies.randomEnemy(level: 1))
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.white)
-                            Button("やめる") { dismiss() }
-                                .buttonStyle(.bordered)
-                                .tint(.white)
+                        Button {
+                            game.resetRun()
+                            challenge(enemies.randomEnemy(level: 1))
+                        } label: {
+                            Text("最初から")
+                                .frame(maxWidth: .infinity)
                         }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                        quitButton
                     }
                 }
             } else {
@@ -237,22 +238,21 @@ struct BattleView: View {
                     VStack(spacing: 10) {
                         LifeIndicator()
                         if life.canPlay {
-                            HStack {
-                                Button("もう一度") { restartStoryMatch() }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(Theme.accent)
-                                Button("やめる") { dismiss() }
-                                    .buttonStyle(.bordered)
-                                    .tint(.white)
+                            Button {
+                                restartStoryMatch()
+                            } label: {
+                                Text("もう一度")
+                                    .frame(maxWidth: .infinity)
                             }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Theme.accent)
+                            quitButton
                         } else {
                             Text("ライフがなくなりました")
                                 .font(.subheadline.bold())
                                 .foregroundStyle(.white)
                             LifeRefillButton()
-                            Button("やめる") { dismiss() }
-                                .buttonStyle(.bordered)
-                                .tint(.white)
+                            quitButton
                         }
                     }
                 }
@@ -309,6 +309,7 @@ struct BattleView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Button {
+                    onAdvanceStory()
                     dismiss()
                 } label: {
                     Text("ストーリーを進める")
@@ -316,6 +317,7 @@ struct BattleView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.accent)
+                quitButton
             }
         }
     }
@@ -347,11 +349,21 @@ struct BattleView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.accent)
                 }
-                Button("やめる") { dismiss() }
-                    .buttonStyle(.bordered)
-                    .tint(.white)
+                quitButton
             }
         }
+    }
+
+    /// 結果パネル共通の「やめる」ボタン（上のボタンと同じ横幅）
+    private var quitButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Text("やめる")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .tint(.white)
     }
 
     /// 広告を最後まで見たら、連勝を引き継いで同じ相手に再挑戦

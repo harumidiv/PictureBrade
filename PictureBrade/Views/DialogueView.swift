@@ -27,11 +27,14 @@ struct StoryDialogue: Identifiable {
     let finishTitle: String
     /// 会話のあとに始めるバトルの相手
     var battleEnemy: Enemy?
+    /// 最後のコマで出す「やめる」系ボタンの文言（nil なら出さない）
+    var cancelTitle: String?
 }
 
 /// タップで進む会話画面
 struct DialogueView: View {
     let dialogue: StoryDialogue
+    var onCancel: () -> Void = {}
     let onFinish: () -> Void
 
     @State private var index = 0
@@ -104,13 +107,34 @@ struct DialogueView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .id(index)
             HStack {
-                Spacer()
-                if isLast {
+                if isLast, let cancelTitle = dialogue.cancelTitle {
+                    // 2つ並べるときは同じ横幅にする
+                    Button {
+                        onCancel()
+                    } label: {
+                        Text(cancelTitle)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                    .controlSize(.large)
+                    Button {
+                        onFinish()
+                    } label: {
+                        Text(dialogue.finishTitle)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent)
+                    .controlSize(.large)
+                } else if isLast {
+                    Spacer()
                     Button(dialogue.finishTitle) { onFinish() }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.accent)
                         .controlSize(.large)
                 } else {
+                    Spacer()
                     Label("タップで次へ", systemImage: "chevron.down")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))

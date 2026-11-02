@@ -19,7 +19,6 @@ struct BattleView: View {
     @State private var drag: CGSize?
     /// この試合ですでにライフを減らしたか（二重に減らさないため）
     @State private var lifeCharged = false
-    @State private var confirmQuit = false
     /// ストーリーで勝利後「ストーリーを進める」を選んだときに呼ぶ（やめるを選んだときは呼ばない）
     var onAdvanceStory: () -> Void = {}
 
@@ -50,15 +49,6 @@ struct BattleView: View {
             overlayMessage
         }
         .statusBarHidden()
-        .alert("試合をやめますか？", isPresented: $confirmQuit) {
-            Button("やめる", role: .destructive) {
-                chargeLife()
-                dismiss()
-            }
-            Button("続ける", role: .cancel) {}
-        } message: {
-            Text("途中でやめると負けになり、ライフが1つ減ります")
-        }
         .onChange(of: game.phase) { _, phase in
             // ストーリーで負けたらライフを1つ減らす
             if game.mode == .story, phase == .matchOver(playerWon: false) {
@@ -103,20 +93,6 @@ struct BattleView: View {
             .foregroundStyle(.white)
             .frame(width: 90)
             spinGauge(blade: game.cpu, image: game.cpuImage, spin: game.cpuSpin, score: game.cpuScore, color: Theme.accent)
-        }
-        .overlay(alignment: .topLeading) {
-            Button {
-                if isStoryMatchInProgress {
-                    confirmQuit = true
-                } else {
-                    dismiss()
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .offset(y: -8)
         }
     }
 
@@ -263,13 +239,6 @@ struct BattleView: View {
     }
 
     // MARK: - ライフ（ストーリー）
-
-    /// ストーリーで、シュートしてから決着がつくまでの間
-    private var isStoryMatchInProgress: Bool {
-        guard game.mode == .story, game.hasLaunched, !lifeCharged else { return false }
-        if case .matchOver = game.phase { return false }
-        return true
-    }
 
     private func chargeLife() {
         guard game.mode == .story, !lifeCharged else { return }

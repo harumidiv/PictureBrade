@@ -247,7 +247,17 @@ struct StoryView: View {
             lines.append(DialogueLine(heading: "第\(chapter.number)章\n\(chapter.title)", text: chapter.intro))
         }
         if !isRematch {
-            lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+            if story.isBoss(enemy) {
+                // ボス（王冠の相手）は、黒いシルエットがズシンズシンと近づいてから正体を見せる
+                lines.append(DialogueLine(
+                    text: "……何者かが近づいてくる。",
+                    portrait: enemies.image(for: enemy),
+                    portraitTint: blade.tint.color,
+                    silhouette: true
+                ))
+            } else {
+                lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+            }
         }
         lines.append(DialogueLine(
             speaker: blade.name + (enemy.reading.isEmpty ? "" : "（\(enemy.reading)）") + " Lv.\(enemy.level)",

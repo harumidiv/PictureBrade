@@ -18,6 +18,8 @@ struct DialogueLine {
     var portraitTint: Color = .gray
     /// 場面の挿絵
     var illustration: StoryIllustration?
+    /// 相手を黒いシルエットで出し、ズシンズシンと近づいてくる（次のコマで正体を見せる）
+    var silhouette = false
 }
 
 /// ストーリー画面で表示する一連の会話
@@ -39,6 +41,15 @@ struct DialogueView: View {
 
     @State private var index = 0
     @State private var portraitScale: CGFloat = 0.2
+    /// シルエットが近づいてくるときの大きさ
+    @State private var approachScale: CGFloat = 0.3
+    @State private var shakeOffset: CGFloat = 0
+    /// 「ズシン」の文字（何回目か。左右交互に出す）
+    @State private var thudCount = 0
+    @State private var showThud = false
+    /// 正体を見せるときの白い光
+    @State private var flashOpacity = 0.0
+    private let haptics = UIImpactFeedbackGenerator(style: .heavy)
 
     private var line: DialogueLine { dialogue.lines[index] }
     private var isLast: Bool { index == dialogue.lines.count - 1 }
@@ -77,8 +88,18 @@ struct DialogueView: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 } else if let portrait = currentPortrait, let image = portrait.portrait {
                     BladeBadge(image: image, tint: portrait.portraitTint, size: 180, spinning: true)
-                        .scaleEffect(portraitScale)
-                        .shadow(color: portrait.portraitTint.opacity(0.8), radius: 30)
+                        .brightness(line.silhouette ? -1 : 0)
+                        .scaleEffect(line.silhouette ? approachScale : portraitScale)
+                        .shadow(color: line.silhouette ? .clear : portrait.portraitTint.opacity(0.8), radius: 30)
+                        .overlay(alignment: thudCount.isMultiple(of: 2) ? .topLeading : .bottomTrailing) {
+                            if showThud {
+                                Text("ズシン")
+                                    .font(.system(size: 26, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.8))
+                                    .offset(x: thudCount.isMultiple(of: 2) ? -40 : 40)
+                                    .transition(.opacity.combined(with: .offset(y: 8)))
+                            }
+                        }
                         .onAppear {
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.55)) { portraitScale = 1 }
                         }
@@ -87,10 +108,23 @@ struct DialogueView: View {
                 messageBox
             }
             .padding()
+            .offset(x: shakeOffset)
+
+            // シルエットのあいだは周りを暗くする
+            RadialGradient(colors: [.clear, .black.opacity(0.65)], center: .center, startRadius: 80, endRadius: 420)
+                .ignoresSafeArea()
+                .opacity(line.silhouette ? 1 : 0)
+                .allowsHitTesting(false)
+
+            Color.white
+                .ignoresSafeArea()
+                .opacity(flashOpacity)
+                .allowsHitTesting(false)
         }
         .contentShape(Rectangle())
         .onTapGesture { advance() }
         .animation(.easeInOut(duration: 0.25), value: index)
+        .task(id: index) { await approachIfNeeded() }
     }
 
     private var messageBox: some View {
@@ -148,6 +182,47 @@ struct DialogueView: View {
 
     private func advance() {
         guard !isLast else { return }
+        let wasSilhouette = line.silhouette
         index += 1
+        if wasSilhouette, !line.silhouette { reveal() }
+    }
+
+    // MARK: - シルエットの演出
+
+    /// シルエットのコマで、3回ズシンと揺れながら大きくなる
+    private func approachIfNeeded() async {
+        guard line.silhouette else { return }
+        approachScale = 0.3
+        haptics.prepare()
+        for scale in [0.45, 0.62, 0.8] as [CGFloat] {
+            try? await Task.sleep(for: .milliseconds(800))
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) { approachScale = scale }
+            await stomp()
+        }
+    }
+
+    private func stomp() async {
+        haptics.impactOccurred()
+        thudCount += 1
+        withAnimation(.easeOut(duration: 0.15)) { showThud = true }
+        for x in [-6, 6, -4, 4, 0] as [CGFloat] {
+            withAnimation(.linear(duration: 0.05)) { shakeOffset = x }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        shakeOffset = 0
+        try? await Task.sleep(for: .milliseconds(200))
+        withAnimation(.easeOut(duration: 0.3)) { showThud = false }
+    }
+
+    /// シルエットから正体へ：白く光って、色付きの姿がポンと出る
+    private func reveal() {
+        showThud = false
+        shakeOffset = 0
+        haptics.impactOccurred(intensity: 1)
+        flashOpacity = 0.95
+        withAnimation(.easeOut(duration: 0.55)) { flashOpacity = 0 }
+        portraitScale = 0.8
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.5)) { portraitScale = 1 }
     }
 }

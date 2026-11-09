@@ -164,7 +164,7 @@ enum SceneBuilder {
             shaftMaterial.metallic = 0.6
             shaftMaterial.roughness = 0.3
         }
-        spinner.addChild(makeShaft(shaft.tip, radius: radius, tipHeight: tipHeight, material: shaftMaterial))
+        spinner.addChild(makeShaft(shaft.tip, size: shaft.tipSize, radius: radius, tipHeight: tipHeight, material: shaftMaterial))
 
         // ボディ（基本のボディは画像の平均色。ガチャのボディはその色になり、トゲが付く）
         let body = equipment.body
@@ -183,8 +183,8 @@ enum SceneBuilder {
 
         // ボディのトゲ（顔の画像に隠れないよう、画像のふちの外まで伸ばす）
         if body.fins > 0 {
-            let finLength = radius * 0.75
-            let finMesh = MeshResource.generateBox(width: finLength, height: 0.016, depth: radius * 0.18, cornerRadius: 0.005)
+            let finLength = radius * 0.75 * body.finLength
+            let finMesh = MeshResource.generateBox(width: finLength, height: 0.016, depth: radius * 0.18 * body.finWidth, cornerRadius: 0.005)
             for index in 0..<body.fins {
                 let angle = Float(index) / Float(body.fins) * 2 * .pi
                 let fin = ModelEntity(mesh: finMesh, materials: [discMaterial])
@@ -210,8 +210,10 @@ enum SceneBuilder {
     }
 
     /// シャフトの先端の形ごとのモデル。y = 0 がボディの底、y = -tipHeight が床に触れる点
-    private static func makeShaft(_ tip: ShaftTip, radius: Float, tipHeight: Float, material: PhysicallyBasedMaterial) -> Entity {
+    /// size は先端の太さ・大きさの倍率（高さは変えない）
+    private static func makeShaft(_ tip: ShaftTip, size: Float, radius: Float, tipHeight: Float, material: PhysicallyBasedMaterial) -> Entity {
         let shaft = Entity()
+        let radius = radius * size
         switch tip {
         case .sharp:
             let cone = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [material])
@@ -230,8 +232,16 @@ enum SceneBuilder {
             foot.position.y = -tipHeight * 0.8
             shaft.addChild(body)
             shaft.addChild(foot)
+        case .wide:
+            let body = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.65, radius: radius * 0.09), materials: [material])
+            body.position.y = -tipHeight * 0.33
+            let foot = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.3, radius: radius * 0.26), materials: [material])
+            foot.position.y = -tipHeight * 0.85
+            shaft.addChild(body)
+            shaft.addChild(foot)
         case .ball:
-            let ballRadius = tipHeight * 0.45
+            // 大きくしても先端が床に届き、ボディにめりこみすぎないようにする
+            let ballRadius = tipHeight * min(0.5, 0.45 * size)
             let neck = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.4, radius: radius * 0.08), materials: [material])
             neck.position.y = -tipHeight * 0.2
             let ball = ModelEntity(mesh: .generateSphere(radius: ballRadius), materials: [material])

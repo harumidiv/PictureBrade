@@ -71,7 +71,8 @@ struct GachaView: View {
     }
 
     private func banner(_ kind: PartKind) -> some View {
-        let featured = PartCatalog.parts(kind).filter { $0.rarity == .ultraRare }
+        // SSR から3つだけ見せる（全部並べると横に入りきらない）
+        let featured = Array(PartCatalog.parts(kind).filter { $0.rarity == .ultraRare }.prefix(3))
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -212,6 +213,8 @@ struct PartIcon: View {
             }
         }
         .frame(width: size, height: size)
+        // 長いトゲが丸い枠からはみ出さないようにする
+        .clipShape(Circle())
     }
 
     private var bodyShape: some View {
@@ -219,8 +222,8 @@ struct PartIcon: View {
             ForEach(0..<part.fins, id: \.self) { index in
                 Capsule()
                     .fill(part.color.color.mix(with: .black, by: 0.15))
-                    .frame(width: size * 0.36, height: size * 0.1)
-                    .offset(x: size * 0.26)
+                    .frame(width: size * 0.36 * CGFloat(part.finLength), height: size * 0.1 * CGFloat(part.finWidth))
+                    .offset(x: size * (0.08 + 0.18 * CGFloat(part.finLength)))
                     .rotationEffect(.degrees(Double(index) / Double(part.fins) * 360 + 20))
             }
             Circle()
@@ -233,21 +236,25 @@ struct PartIcon: View {
     @ViewBuilder
     private var shaftShape: some View {
         let color = LinearGradient(colors: [part.color.color.mix(with: .white, by: 0.35), part.color.color], startPoint: .leading, endPoint: .trailing)
+        let scale = CGFloat(part.tipSize)
         VStack(spacing: 0) {
             RoundedRectangle(cornerRadius: size * 0.03)
                 .fill(color)
                 .frame(width: size * 0.4, height: size * 0.1)
             switch part.tip {
+            case .wide:
+                Rectangle().fill(color).frame(width: size * 0.1 * scale, height: size * 0.24)
+                Capsule().fill(color).frame(width: size * 0.5 * scale, height: size * 0.1)
             case .sharp:
-                Triangle().fill(color).frame(width: size * 0.3, height: size * 0.38)
+                Triangle().fill(color).frame(width: size * 0.3 * scale, height: size * 0.38)
             case .needle:
-                Triangle().fill(color).frame(width: size * 0.12, height: size * 0.44)
+                Triangle().fill(color).frame(width: size * 0.12 * scale, height: size * 0.44)
             case .flat:
                 Rectangle().fill(color).frame(width: size * 0.14, height: size * 0.22)
-                RoundedRectangle(cornerRadius: size * 0.03).fill(color).frame(width: size * 0.32, height: size * 0.12)
+                RoundedRectangle(cornerRadius: size * 0.03).fill(color).frame(width: size * 0.32 * scale, height: size * 0.12)
             case .ball:
                 Rectangle().fill(color).frame(width: size * 0.1, height: size * 0.12)
-                Circle().fill(color).frame(width: size * 0.28, height: size * 0.28)
+                Circle().fill(color).frame(width: size * 0.28 * min(1.15, scale), height: size * 0.28 * min(1.15, scale))
             }
         }
         .offset(y: size * 0.02)

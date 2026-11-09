@@ -240,8 +240,7 @@ extension BladeEquipView.Category {
     var previewAngle: PreviewAngle {
         switch self {
         case .looks: .top
-        case .body: .oblique
-        case .shaft: .side
+        case .body, .shaft: .side
         }
     }
 }

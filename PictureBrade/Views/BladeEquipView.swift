@@ -17,15 +17,22 @@ struct BladeEquipView: View {
     @Environment(CosmeticStore.self) private var cosmetics
 
     enum Category: String, CaseIterable, Identifiable {
+        case looks = "見た目"
         case body = "ボディ"
         case shaft = "シャフト"
+        var id: Self { self }
+    }
+
+    /// 「見た目」タブの中で、さらに切り替える種類（ストーリーの報酬）
+    enum LooksCategory: String, CaseIterable, Identifiable {
         case skin = "見た目"
         case effect = "エフェクト"
         case sound = "サウンド"
         var id: Self { self }
     }
 
-    @State private var category: Category = .body
+    @State private var category: Category = .looks
+    @State private var looksCategory: LooksCategory = .skin
     @State private var burst: EffectBurst?
     /// 開いたときに NEW だった報酬（見ている間は NEW を出し続ける）
     @State private var newOnOpen: Set<String> = []
@@ -38,11 +45,9 @@ struct BladeEquipView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     switch category {
+                    case .looks: looksContent
                     case .body: partList(.body, equipped: equipment.body)
                     case .shaft: partList(.shaft, equipped: equipment.shaft)
-                    case .skin: rewardList(BladeSkin.allCases.map(Reward.skin))
-                    case .effect: rewardList(HitEffect.allCases.map(Reward.effect))
-                    case .sound: rewardList(HitSound.allCases.map(Reward.sound))
                     }
                 }
                 .padding(16)
@@ -177,6 +182,20 @@ struct BladeEquipView: View {
         }
     }
 
+    private var looksContent: some View {
+        VStack(spacing: 12) {
+            Picker("見た目の種類", selection: $looksCategory) {
+                ForEach(LooksCategory.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            switch looksCategory {
+            case .skin: rewardList(BladeSkin.allCases.map(Reward.skin))
+            case .effect: rewardList(HitEffect.allCases.map(Reward.effect))
+            case .sound: rewardList(HitSound.allCases.map(Reward.sound))
+            }
+        }
+    }
+
     private func rewardList(_ rewards: [Reward]) -> some View {
         let unlockedCount = Reward.all.count { cosmetics.isUnlocked($0, enemies: enemies) }
         return VStack(alignment: .leading, spacing: 8) {
@@ -220,9 +239,9 @@ extension BladeEquipView.Category {
     /// 選んでいる種類がいちばん見やすいカメラの向き
     var previewAngle: PreviewAngle {
         switch self {
+        case .looks: .top
         case .body: .oblique
         case .shaft: .side
-        case .skin, .effect, .sound: .top
         }
     }
 }

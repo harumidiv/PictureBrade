@@ -62,8 +62,8 @@ final class EnemyCatalog {
               intro: "どっしり構えた山は動かない。押し出せるものなら押し出してみろ！",
               defeat: "山が……動いた……！"),
         Enemy(character: "川", reading: "かわ", level: 1, color: .systemBlue,
-              intro: "流れる3本の線、それが川。この流れ、止められるかな？",
-              defeat: "流れが止まった……。気をつけろ、この先は五行の文字たちが待っている"),
+              intro: "流れる3本の線、それが川。宝物庫から持ち出したこの太鼓を、ドンと鳴らしてキミを押し流してやる！",
+              defeat: "流れが止まった……。この太鼓はキミにやろう、ドンと響かせてくれ。気をつけろ、この先は五行の文字たちが待っている"),
         // 第2章 五行の試練
         Enemy(character: "火", reading: "ひ", level: 2, color: .systemOrange,
               intro: "五行の一番手、火！　燃え尽きるまで回り続けてやる！",
@@ -78,8 +78,8 @@ final class EnemyCatalog {
               intro: "硬くて重い、それが金！　キラキラ回って跳ね返してやる！",
               defeat: "ピカピカのボディに傷が……。土のヤツは手ごわいぞ"),
         Enemy(character: "土", reading: "つち", level: 2, color: .systemBrown,
-              intro: "五行の最後、土。すべてを受け止める大地の力を見せてやろう",
-              defeat: "大地が揺れた……。この先の文字たちは、自然そのものの力を持っている"),
+              intro: "五行の最後、土。大地に眠る「漢字の魂」は、ワシが守っておる。すべてを受け止める大地の力を見せてやろう",
+              defeat: "大地が揺れた……。漢字の魂、持っていけ。ぶつかるたびに「斬」や「撃」が飛び出すだろう。この先の文字たちは、自然そのものの力を持っている"),
         // 第3章 荒ぶる自然
         Enemy(character: "炎", reading: "ほのお", level: 3, color: .systemRed,
               intro: "火が2つ重なれば炎！　さっきの「火」とは格が違うぜ！",
@@ -94,8 +94,8 @@ final class EnemyCatalog {
               intro: "水に点を1つ足せば氷。冷たく、鋭く、回り続ける",
               defeat: "溶けて……しまう……。次の「剣」は自然の文字じゃない、気をつけて"),
         Enemy(character: "剣", reading: "つるぎ", level: 3, color: .systemGray,
-              intro: "我は剣。自然の文字を束ね、伝説の獣たちを目覚めさせた者の刃なり",
-              defeat: "見事……。だが獣たちはもう目覚めた。この先は伝説の領域だ"),
+              intro: "我は剣。宝物庫の黄金で鍛えられ、伝説の獣たちを目覚めさせた者の刃なり。この輝き、そなたには渡さぬ",
+              defeat: "見事……。この黄金の輝き、そなたのコマにこそふさわしい。だが獣たちはもう目覚めた。この先は伝説の領域だ"),
         // 第4章 伝説の獣
         Enemy(character: "鬼", reading: "おに", level: 4, color: .systemPurple,
               intro: "ガハハ！　鬼の金棒ならぬ、鬼の回転を食らえ！",
@@ -110,8 +110,8 @@ final class EnemyCatalog {
               intro: "空から獲物を狙う鷹の目からは、逃げられない",
               defeat: "能ある鷹が……爪を隠しすぎた……"),
         Enemy(character: "嵐", reading: "あらし", level: 4, color: .systemIndigo,
-              intro: "山に風が吹けば嵐となる。すべてを巻き込んで吹き飛ばす！",
-              defeat: "嵐が過ぎ去った……。覇王の城への道が開かれたぞ"),
+              intro: "山に風が吹けば嵐となる。この鈴の音が聞こえるか？　チリーンと鳴るたび、すべてを巻き込んで吹き飛ばす！",
+              defeat: "嵐が過ぎ去った……。鈴はキミに預けよう、澄んだ音で勝利を知らせてくれ。覇王の城への道が開かれたぞ"),
         // 第5章 覇王の城
         Enemy(character: "魔", reading: "ま", level: 5, color: .systemPurple,
               intro: "ここは覇王の城。門番の魔が、通すわけにはいかないねぇ",
@@ -126,8 +126,8 @@ final class EnemyCatalog {
               intro: "覇王様の前に、ドカンと一発！　爆発的な回転を見せてやる！",
               defeat: "ふ、不発……。覇王様、あとは頼みます……"),
         Enemy(character: "覇", reading: "は", level: 5, color: .systemYellow,
-              intro: "よくぞここまで来た、フォトブレーダーよ。文字たちを解き放ったのはこの覇だ。辞書の頂点に立つ力、その身で味わうがいい！",
-              defeat: "写真から生まれたコマに……覇道を阻まれるとは……"),
+              intro: "よくぞここまで来た、フォトブレーダーよ。文字たちを解き放ち、宝物庫のお宝を持ち出させたのはこの覇だ。城を照らすこのネオンこそ覇者の証。辞書の頂点に立つ力、その身で味わうがいい！",
+              defeat: "写真から生まれたコマに……覇道を阻まれるとは……。このネオンの光、新たな覇者となったキミが持っていけ……"),
     ]
 
     private static let defeatedKey = "defeatedEnemies"

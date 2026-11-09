@@ -279,6 +279,101 @@ enum SceneBuilder {
     }
 }
 
+// MARK: - Aura
+
+extension SceneBuilder {
+    static let auraName = "aura"
+
+    /// 連勝したコマの足元から立ちのぼるオーラ。コマの root に付ける（回転はしない）
+    static func makeAura(tier: AuraTier, radius: Float, tipHeight: Float) -> Entity? {
+        guard tier != .none else { return nil }
+        let aura = Entity()
+        aura.name = auraName
+        // root の高さは「床 + 軸の長さ」なので、床の位置まで下げる
+        aura.position.y = -tipHeight
+
+        // 足元の光の輪
+        if let cgImage = auraGlowImage.cgImage,
+           let texture = try? TextureResource(image: cgImage, options: .init(semantic: .color)) {
+            var glowMaterial = UnlitMaterial()
+            glowMaterial.color = .init(tint: tier.isRainbow ? .white : tier.uiColor, texture: .init(texture))
+            glowMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.9))
+            glowMaterial.faceCulling = .none
+            let size = radius * 3.2
+            let glow = ModelEntity(mesh: .generatePlane(width: size, depth: size), materials: [glowMaterial])
+            glow.position.y = 0.004
+            aura.addChild(glow)
+        }
+
+        // 立ちのぼる炎（Metal のシェーダーで描く。使えない環境ではうっすら光る筒にする）
+        if let mesh = auraTubeMesh {
+            let flame = ModelEntity(mesh: mesh, materials: [flameMaterial(tier: tier)])
+            flame.scale = [radius * 1.15, tier.flameHeight, radius * 1.15]
+            aura.addChild(flame)
+        }
+        return aura
+    }
+
+    private static func flameMaterial(tier: AuraTier) -> any RealityKit.Material {
+        if let library = MTLCreateSystemDefaultDevice()?.makeDefaultLibrary() {
+            let shader = CustomMaterial.SurfaceShader(named: "bladeAura", in: library)
+            if var material = try? CustomMaterial(surfaceShader: shader, lightingModel: .lit) {
+                material.custom.value = tier.shaderParameter
+                material.blending = .transparent(opacity: .init(floatLiteral: 1))
+                material.faceCulling = .none
+                return material
+            }
+        }
+        var material = UnlitMaterial(color: tier.uiColor)
+        material.blending = .transparent(opacity: .init(floatLiteral: 0.25))
+        material.faceCulling = .none
+        return material
+    }
+
+    /// 半径1・高さ1（y = 0〜1）のふたのない筒
+    private static let auraTubeMesh: MeshResource? = {
+        let segments = 48
+        let rows = 6
+        var positions: [SIMD3<Float>] = []
+        var indices: [UInt32] = []
+        for row in 0...rows {
+            let y = Float(row) / Float(rows)
+            for segment in 0...segments {
+                let angle = Float(segment) / Float(segments) * 2 * .pi
+                positions.append([cos(angle), y, sin(angle)])
+            }
+        }
+        let stride = UInt32(segments + 1)
+        for row in 0..<UInt32(rows) {
+            for segment in 0..<UInt32(segments) {
+                let a = row * stride + segment
+                let b = a + 1
+                let c = a + stride
+                let d = c + 1
+                indices += [a, c, b, b, c, d]
+            }
+        }
+        var descriptor = MeshDescriptor(name: "auraTube")
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(positions.map { simd_normalize(SIMD3($0.x, 0, $0.z)) })
+        descriptor.primitives = .triangles(indices)
+        return try? MeshResource.generate(from: [descriptor])
+    }()
+
+    /// 中心が明るく、外に向かって消えていく白い円（色は材質の tint で付ける）
+    private static let auraGlowImage: UIImage = {
+        let side: CGFloat = 256
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let colors = [UIColor.white.withAlphaComponent(0.9).cgColor, UIColor.white.withAlphaComponent(0.35).cgColor, UIColor.white.withAlphaComponent(0).cgColor]
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0, 0.45, 1]) else { return }
+            let center = CGPoint(x: side / 2, y: side / 2)
+            context.cgContext.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: side / 2, options: [])
+        }
+    }()
+}
+
 extension BladeSkin {
     /// BladeSkinShaders.metal の関数名
     var shaderFunctionName: String? {

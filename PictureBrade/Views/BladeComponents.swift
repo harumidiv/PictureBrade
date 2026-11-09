@@ -23,11 +23,16 @@ struct BladeBadge: View {
     var spinning = false
     /// ストーリーの報酬で手に入る見た目の加工
     var skin: BladeSkin = .normal
+    /// ランダム連戦で手に入るオーラ
+    var aura: AuraTier = .none
 
     @State private var angle: Double = 0
 
     var body: some View {
         ZStack {
+            if aura != .none {
+                AuraGlow(tier: aura, size: size)
+            }
             Circle()
                 .fill(RadialGradient(colors: [tint.opacity(0.9), tint.opacity(0.35)], center: .center, startRadius: 0, endRadius: size / 2))
             Circle()
@@ -131,10 +136,24 @@ struct BladeCard: View {
     let blade: Blade
     let image: UIImage?
     var isSelected = false
+    /// ランダム連戦の最高連勝（0 なら出さない）
+    var bestStreak = 0
 
     var body: some View {
+        let aura = AuraTier(streak: bestStreak)
         VStack(spacing: 8) {
-            BladeBadge(image: image, tint: blade.tint.color, size: 84)
+            BladeBadge(image: image, tint: blade.tint.color, size: 84, aura: aura)
+                .overlay(alignment: .bottom) {
+                    if bestStreak > 0 {
+                        Label("\(bestStreak)連勝", systemImage: "flame.fill")
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(aura == .none ? .white : .black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(aura == .none ? Color.white.opacity(0.25) : aura.color))
+                            .offset(y: 8)
+                    }
+                }
             Text(blade.name)
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -166,6 +185,7 @@ struct BladeCard: View {
 struct PlayerBladePicker: View {
     @Binding var selection: Blade?
     @Environment(BladeStore.self) private var store
+    @Environment(EnemyCatalog.self) private var enemies
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -177,7 +197,8 @@ struct PlayerBladePicker: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 12) {
                         ForEach(store.allBlades) { blade in
-                            BladeCard(blade: blade, image: store.image(for: blade), isSelected: selection?.id == blade.id)
+                            BladeCard(blade: blade, image: store.image(for: blade), isSelected: selection?.id == blade.id,
+                                      bestStreak: enemies.bestStreak(for: blade))
                                 .frame(width: 150)
                                 .onTapGesture { selection = blade }
                         }
@@ -233,5 +254,44 @@ private struct BladeSkinModifier: ViewModifier {
         case .hologram: "previewSkinHologram"
         }
         return Shader(function: ShaderFunction(library: .default, name: name), arguments: [.float2(size), .float(time)])
+    }
+}
+
+// MARK: - オーラ
+
+/// コマのアイコンの後ろで脈打つオーラ（虹色のオーラはぐるぐる回る）
+struct AuraGlow: View {
+    let tier: AuraTier
+    let size: CGFloat
+
+    @State private var pulse = false
+    @State private var spin = false
+
+    var body: some View {
+        ZStack {
+            if tier.isRainbow {
+                Circle()
+                    .fill(AngularGradient(colors: [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .red], center: .center))
+                    .rotationEffect(.degrees(spin ? 360 : 0))
+                    .mask(glowMask)
+            } else {
+                Circle()
+                    .fill(tier.color)
+                    .mask(glowMask)
+            }
+        }
+        .frame(width: size * 1.5, height: size * 1.5)
+        .scaleEffect(pulse ? 1.06 : 0.94)
+        .opacity(pulse ? 1 : 0.75)
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+            guard tier.isRainbow else { return }
+            withAnimation(.linear(duration: 2.5).repeatForever(autoreverses: false)) { spin = true }
+        }
+    }
+
+    private var glowMask: some View {
+        Circle().fill(RadialGradient(colors: [.white, .white.opacity(0.6), .clear], center: .center, startRadius: size * 0.3, endRadius: size * 0.75))
     }
 }

@@ -158,10 +158,14 @@ final class BattleGame {
     let mode: Mode
     /// ストーリーの報酬で選んだ見た目・エフェクト・音
     let loadout: Loadout
+    /// 自分のコマのオーラ（ランダム連戦の最高連勝で決まる）
+    private(set) var playerAura: AuraTier
 
-    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story, loadout: Loadout = Loadout()) {
+    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story,
+         loadout: Loadout = Loadout(), playerAura: AuraTier = .none) {
         self.mode = mode
         self.loadout = loadout
+        self.playerAura = playerAura
         self.player = player
         self.cpu = cpu
         self.playerImage = playerImage
@@ -222,6 +226,7 @@ final class BattleGame {
         let cpuModel = await SceneBuilder.makeBlade(image: cpuImage, tint: cpu.tint, radius: tops[1].radius)
         models = [playerModel, cpuModel]
         models.forEach { worldRoot.addChild($0.root) }
+        attachPlayerAura()
         if loadout.effect != .sparks {
             glyphMaterials = await SceneBuilder.glyphMaterials(for: loadout.effect)
         }
@@ -271,6 +276,22 @@ final class BattleGame {
         let vector = SIMD2<Float>(Float(drag.width), Float(drag.height)) / Float(Self.maxDragDistance)
         let length = simd_length(vector)
         steering = length > 1 ? vector / length : vector
+    }
+
+    /// 連戦中に新しいオーラを手に入れたら、すぐに付け替える
+    func setPlayerAura(_ tier: AuraTier) {
+        guard tier != playerAura else { return }
+        playerAura = tier
+        attachPlayerAura()
+    }
+
+    private func attachPlayerAura() {
+        guard models.indices.contains(Self.playerIndex) else { return }
+        let model = models[Self.playerIndex]
+        model.root.findEntity(named: SceneBuilder.auraName)?.removeFromParent()
+        if let aura = SceneBuilder.makeAura(tier: playerAura, radius: tops[Self.playerIndex].radius, tipHeight: model.tipHeight) {
+            model.root.addChild(aura)
+        }
     }
 
     func rush() {

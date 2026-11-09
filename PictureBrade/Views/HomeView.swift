@@ -68,7 +68,8 @@ struct HomeView: View {
             HomeLogo()
                 .padding(.top, 12)
             Spacer(minLength: 8)
-            HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
+            HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), aura: heroBlade.map(enemies.aura(for:)) ?? .none,
+                     onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
             Spacer(minLength: 8)
             modeButtons
             dock
@@ -269,6 +270,7 @@ private struct HomeLogo: View {
 private struct HomeHero: View {
     let blade: Blade?
     let image: UIImage?
+    var aura: AuraTier = .none
     let onTapBlade: () -> Void
     let onCreate: () -> Void
 
@@ -335,7 +337,7 @@ private struct HomeHero: View {
                 }
             } label: {
                 VStack(spacing: 6) {
-                    BladeBadge(image: image, tint: blade.tint.color, size: 140, spinning: true)
+                    BladeBadge(image: image, tint: blade.tint.color, size: 140, spinning: true, aura: aura)
                         .id(blade.id)
                         .shadow(color: blade.tint.color.opacity(0.8), radius: 16)
                         .scaleEffect(tapBoost ? 1.15 : 1)
@@ -531,6 +533,7 @@ private struct DockButton: View {
 /// 自分のコマの一覧（削除もここから）
 private struct BladeCollectionView: View {
     @Environment(BladeStore.self) private var store
+    @Environment(EnemyCatalog.self) private var enemies
     @Environment(\.dismiss) private var dismiss
     @State private var isAddingBlade = false
     @State private var bladeToDelete: Blade?
@@ -564,7 +567,7 @@ private struct BladeCollectionView: View {
                     }
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(store.blades) { blade in
-                            BladeCard(blade: blade, image: store.image(for: blade))
+                            BladeCard(blade: blade, image: store.image(for: blade), bestStreak: enemies.bestStreak(for: blade))
                                 .overlay(alignment: .topTrailing) {
                                     if isEditing {
                                         Button {

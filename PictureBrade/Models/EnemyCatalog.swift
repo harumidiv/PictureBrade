@@ -133,12 +133,15 @@ final class EnemyCatalog {
     private static let defeatedKey = "defeatedEnemies"
     private static let starsKey = "storyStars"
     private static let bestStreakKey = "randomBestStreak"
+    private static let bladeStreaksKey = "randomBestStreakByBlade"
 
     private(set) var defeated: Set<String>
     /// ステージごとの一番よかった星（1...3）
     private(set) var bestStars: [String: Int]
     /// ランダム連戦の最高連勝数
     private(set) var bestStreak: Int
+    /// コマごとのランダム連戦の最高連勝数（キーはコマの ID）。オーラを決めるのに使う
+    private(set) var bladeBestStreaks: [String: Int]
 
     @ObservationIgnored private var cache: [String: (blade: Blade, image: UIImage)] = [:]
 
@@ -146,6 +149,7 @@ final class EnemyCatalog {
         defeated = Set(UserDefaults.standard.stringArray(forKey: Self.defeatedKey) ?? [])
         bestStars = UserDefaults.standard.dictionary(forKey: Self.starsKey) as? [String: Int] ?? [:]
         bestStreak = UserDefaults.standard.integer(forKey: Self.bestStreakKey)
+        bladeBestStreaks = UserDefaults.standard.dictionary(forKey: Self.bladeStreaksKey) as? [String: Int] ?? [:]
     }
 
     // MARK: - ランダム連戦
@@ -170,10 +174,23 @@ final class EnemyCatalog {
         return Enemy(character: fallback.character, reading: fallback.reading, level: level, color: fallback.color, isRandom: true)
     }
 
-    func recordStreak(_ streak: Int) {
+    /// 連勝数を記録する。blade は連勝したコマ（コマごとの記録でオーラが決まる）
+    func recordStreak(_ streak: Int, blade: Blade) {
+        if streak > bestStreak(for: blade) {
+            bladeBestStreaks[blade.id.uuidString] = streak
+            UserDefaults.standard.set(bladeBestStreaks, forKey: Self.bladeStreaksKey)
+        }
         guard streak > bestStreak else { return }
         bestStreak = streak
         UserDefaults.standard.set(streak, forKey: Self.bestStreakKey)
+    }
+
+    func bestStreak(for blade: Blade) -> Int {
+        bladeBestStreaks[blade.id.uuidString] ?? 0
+    }
+
+    func aura(for blade: Blade) -> AuraTier {
+        AuraTier(streak: bestStreak(for: blade))
     }
 
     func isDefeated(_ enemy: Enemy) -> Bool {

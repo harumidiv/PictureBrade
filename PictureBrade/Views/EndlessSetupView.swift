@@ -111,7 +111,8 @@ struct EndlessSetupView: View {
             player: playerBlade, playerImage: playerImage,
             cpu: enemies.blade(for: opponent), cpuImage: enemies.image(for: opponent),
             cpuSkill: opponent.skill, mode: .endless,
-            loadout: cosmetics.validatedLoadout(enemies: enemies)
+            loadout: cosmetics.validatedLoadout(enemies: enemies),
+            playerAura: enemies.aura(for: playerBlade)
         )
     }
 }

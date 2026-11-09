@@ -21,6 +21,8 @@ struct BattleView: View {
     @State private var lifeCharged = false
     /// この勝利で新しく手に入れた報酬（ストーリーの章ボスを初めて倒したとき）
     @State private var earnedRewards: [Reward] = []
+    /// この勝利で新しく手に入れたオーラ（ランダム連戦）
+    @State private var newAura: AuraTier?
     /// ストーリーで勝利後「ストーリーを進める」を選んだときに呼ぶ（やめるを選んだときは呼ばない）
     var onAdvanceStory: () -> Void = {}
 
@@ -65,7 +67,11 @@ struct BattleView: View {
                 }
                 enemies.markDefeated(bladeID: game.cpu.id, stars: game.earnedStars)
             case .endless:
-                enemies.recordStreak(game.winStreak)
+                let auraBefore = enemies.aura(for: game.player)
+                enemies.recordStreak(game.winStreak, blade: game.player)
+                let auraAfter = enemies.aura(for: game.player)
+                newAura = auraAfter > auraBefore ? auraAfter : nil
+                game.setPlayerAura(auraAfter)
                 gameCenter.submitEndless(streak: game.winStreak)
                 nextEnemy = enemies.randomEnemy(level: EnemyCatalog.randomLevel(forStreak: game.winStreak))
             }
@@ -76,7 +82,7 @@ struct BattleView: View {
 
     private var topBar: some View {
         HStack(alignment: .top) {
-            spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan, skin: game.loadout.skin)
+            spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan, skin: game.loadout.skin, aura: game.playerAura)
             VStack(spacing: 2) {
                 switch game.mode {
                 case .story:
@@ -101,9 +107,9 @@ struct BattleView: View {
         }
     }
 
-    private func spinGauge(blade: Blade, image: UIImage, spin: Float, score: Int, color: Color, skin: BladeSkin = .normal) -> some View {
+    private func spinGauge(blade: Blade, image: UIImage, spin: Float, score: Int, color: Color, skin: BladeSkin = .normal, aura: AuraTier = .none) -> some View {
         VStack(spacing: 4) {
-            BladeBadge(image: image, tint: blade.tint.color, size: 44, skin: skin)
+            BladeBadge(image: image, tint: blade.tint.color, size: 44, skin: skin, aura: aura)
             Text(blade.name)
                 .font(.caption.bold())
                 .lineLimit(1)
@@ -304,6 +310,9 @@ struct BattleView: View {
         let streak = game.winStreak >= 2 ? "  \(game.winStreak)連勝中！" : ""
         return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！\(streak)") {
             VStack(spacing: 10) {
+                if let newAura {
+                    AuraGetBanner(tier: newAura, blade: game.player, image: game.playerImage)
+                }
                 if let nextEnemy {
                     let blade = enemies.blade(for: nextEnemy)
                     HStack(spacing: 12) {
@@ -375,6 +384,7 @@ struct BattleView: View {
 
     private func challenge(_ enemy: Enemy) {
         nextEnemy = nil
+        newAura = nil
         Task {
             await game.challengeNext(cpu: enemies.blade(for: enemy), image: enemies.image(for: enemy), skill: enemy.skill)
         }
@@ -507,6 +517,41 @@ private struct RewardGetBanner: View {
         .opacity(appeared ? 1 : 0)
         .onAppear {
             withAnimation(.spring(duration: 0.5, bounce: 0.5).delay(0.6)) { appeared = true }
+        }
+    }
+}
+
+/// ランダム連戦の勝利パネルに出す「オーラ獲得！」
+private struct AuraGetBanner: View {
+    let tier: AuraTier
+    let blade: Blade
+    let image: UIImage
+    @State private var appeared = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            BladeBadge(image: image, tint: blade.tint.color, size: 48, spinning: true, aura: tier)
+                .padding(6)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(tier.requiredStreak)連勝達成！  オーラ獲得")
+                    .font(.caption.bold())
+                    .foregroundStyle(tier.color)
+                Text(tier.title)
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+                Text("\(blade.name)がオーラをまとった！")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(tier.color.opacity(0.15)))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tier.color, lineWidth: 2))
+        .scaleEffect(appeared ? 1 : 0.6)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(duration: 0.5, bounce: 0.5).delay(0.4)) { appeared = true }
         }
     }
 }

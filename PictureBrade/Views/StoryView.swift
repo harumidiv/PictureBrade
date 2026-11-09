@@ -12,6 +12,7 @@ struct StoryView: View {
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(LifeManager.self) private var life
     @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
 
     let story: StoryKind
 
@@ -208,7 +209,7 @@ struct StoryView: View {
                         Button {
                             playerBlade = blade
                         } label: {
-                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46, skin: cosmetics.validatedLoadout(enemies: enemies).skin,
+                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46, skin: cosmetics.validatedLoadout(for: blade, enemies: enemies).skin,
                                        aura: enemies.aura(for: blade))
                                 .overlay(Circle().stroke(Theme.gold, lineWidth: playerBlade?.id == blade.id ? 3 : 0).padding(-4))
                                 .padding(5)
@@ -288,11 +289,12 @@ struct StoryView: View {
         defeatedCountBeforeBattle = enemies.defeated.count
         advanceStoryAfterBattle = false
         battle = BattleGame(
-            player: playerBlade, playerImage: playerImage,
+            player: parts.equipped(playerBlade), playerImage: playerImage,
             cpu: enemies.blade(for: enemy), cpuImage: enemies.image(for: enemy),
             cpuSkill: enemy.skill, mode: .story,
-            loadout: cosmetics.validatedLoadout(enemies: enemies),
-            playerAura: enemies.aura(for: playerBlade)
+            loadout: cosmetics.validatedLoadout(for: playerBlade, enemies: enemies),
+            playerAura: enemies.aura(for: playerBlade),
+            playerEquipment: parts.equipment(for: playerBlade)
         )
     }
 

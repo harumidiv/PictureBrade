@@ -160,9 +160,12 @@ final class BattleGame {
     let loadout: Loadout
     /// 自分のコマのオーラ（ランダム連戦の最高連勝で決まる）
     private(set) var playerAura: AuraTier
+    /// 自分のコマに付けたボディとシャフト（能力は player.stats に足してある）
+    let playerEquipment: Equipment
 
     init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story,
-         loadout: Loadout = Loadout(), playerAura: AuraTier = .none) {
+         loadout: Loadout = Loadout(), playerAura: AuraTier = .none, playerEquipment: Equipment = Equipment()) {
+        self.playerEquipment = playerEquipment
         self.mode = mode
         self.loadout = loadout
         self.playerAura = playerAura
@@ -222,7 +225,9 @@ final class BattleGame {
             TopState(stats: player.stats, position: Self.playerStart),
             TopState(stats: cpu.stats, position: Self.cpuStart),
         ]
-        let playerModel = await SceneBuilder.makeBlade(image: playerImage, tint: player.tint, radius: tops[0].radius, skin: loadout.skin)
+        let playerModel = await SceneBuilder.makeBlade(
+            image: playerImage, tint: player.tint, radius: tops[0].radius, skin: loadout.skin, equipment: playerEquipment
+        )
         let cpuModel = await SceneBuilder.makeBlade(image: cpuImage, tint: cpu.tint, radius: tops[1].radius)
         models = [playerModel, cpuModel]
         models.forEach { worldRoot.addChild($0.root) }

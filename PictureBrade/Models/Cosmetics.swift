@@ -242,25 +242,30 @@ struct Loadout: Equatable {
     var sound: HitSound = .metal
 }
 
-/// 装備中の報酬と、まだ見ていない新しい報酬を覚えておく
+/// コマごとに装備中の報酬と、まだ見ていない新しい報酬を覚えておく
 @Observable
 final class CosmeticStore {
     private static let skinKey = "cosmetic.skin"
     private static let effectKey = "cosmetic.effect"
     private static let soundKey = "cosmetic.sound"
+    private static let bladeLoadoutsKey = "cosmetic.bladeLoadouts"
     private static let seenKey = "cosmetic.seen"
 
-    private(set) var loadout: Loadout
-    /// 一度カスタマイズ画面で見た報酬（NEW を消すのに使う）
+    /// まだ個別に設定していないコマに使う組み合わせ（コマごとの設定ができる前の、全部共通の設定）
+    private let defaultLoadout: Loadout
+    /// キーはコマの ID、値は [見た目, エフェクト, サウンド]
+    private var bladeLoadouts: [String: [String]]
+    /// 一度装備画面で見た報酬（NEW を消すのに使う）
     private(set) var seen: Set<String>
 
     init() {
         let defaults = UserDefaults.standard
-        loadout = Loadout(
+        defaultLoadout = Loadout(
             skin: defaults.string(forKey: Self.skinKey).flatMap(BladeSkin.init(rawValue:)) ?? .normal,
             effect: defaults.string(forKey: Self.effectKey).flatMap(HitEffect.init(rawValue:)) ?? .sparks,
             sound: defaults.string(forKey: Self.soundKey).flatMap(HitSound.init(rawValue:)) ?? .metal
         )
+        bladeLoadouts = defaults.dictionary(forKey: Self.bladeLoadoutsKey) as? [String: [String]] ?? [:]
         seen = Set(defaults.stringArray(forKey: Self.seenKey) ?? [])
     }
 
@@ -281,7 +286,7 @@ final class CosmeticStore {
         return enemies.isDefeated(boss)
     }
 
-    /// 手に入れたけれど、まだカスタマイズ画面で見ていない報酬
+    /// 手に入れたけれど、まだ装備画面で見ていない報酬
     func newRewards(enemies: EnemyCatalog) -> [Reward] {
         Reward.all.filter { isUnlocked($0, enemies: enemies) && !seen.contains($0.id) }
     }
@@ -293,32 +298,38 @@ final class CosmeticStore {
         UserDefaults.standard.set(Array(seen), forKey: Self.seenKey)
     }
 
+    func loadout(for blade: Blade) -> Loadout {
+        guard let values = bladeLoadouts[blade.id.uuidString], values.count == 3 else { return defaultLoadout }
+        return Loadout(
+            skin: BladeSkin(rawValue: values[0]) ?? defaultLoadout.skin,
+            effect: HitEffect(rawValue: values[1]) ?? defaultLoadout.effect,
+            sound: HitSound(rawValue: values[2]) ?? defaultLoadout.sound
+        )
+    }
+
     /// 装備中のもののうち、手に入れていないものははじめからのものに戻す（記録を消したときなど）
-    func validatedLoadout(enemies: EnemyCatalog) -> Loadout {
-        var result = loadout
+    func validatedLoadout(for blade: Blade, enemies: EnemyCatalog) -> Loadout {
+        var result = loadout(for: blade)
         if !isUnlocked(.skin(result.skin), enemies: enemies) { result.skin = .normal }
         if !isUnlocked(.effect(result.effect), enemies: enemies) { result.effect = .sparks }
         if !isUnlocked(.sound(result.sound), enemies: enemies) { result.sound = .metal }
         return result
     }
 
-    func equip(_ reward: Reward) {
-        let defaults = UserDefaults.standard
+    func equip(_ reward: Reward, on blade: Blade) {
+        var loadout = loadout(for: blade)
         switch reward {
-        case .skin(let skin):
-            loadout.skin = skin
-            defaults.set(skin.rawValue, forKey: Self.skinKey)
-        case .effect(let effect):
-            loadout.effect = effect
-            defaults.set(effect.rawValue, forKey: Self.effectKey)
-        case .sound(let sound):
-            loadout.sound = sound
-            defaults.set(sound.rawValue, forKey: Self.soundKey)
+        case .skin(let skin): loadout.skin = skin
+        case .effect(let effect): loadout.effect = effect
+        case .sound(let sound): loadout.sound = sound
         }
+        bladeLoadouts[blade.id.uuidString] = [loadout.skin.rawValue, loadout.effect.rawValue, loadout.sound.rawValue]
+        UserDefaults.standard.set(bladeLoadouts, forKey: Self.bladeLoadoutsKey)
     }
 
-    func isEquipped(_ reward: Reward) -> Bool {
-        switch reward {
+    func isEquipped(_ reward: Reward, on blade: Blade) -> Bool {
+        let loadout = loadout(for: blade)
+        return switch reward {
         case .skin(let skin): loadout.skin == skin
         case .effect(let effect): loadout.effect == effect
         case .sound(let sound): loadout.sound == sound

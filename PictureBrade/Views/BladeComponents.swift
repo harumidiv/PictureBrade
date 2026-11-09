@@ -138,6 +138,8 @@ struct BladeCard: View {
     var isSelected = false
     /// ランダム連戦の最高連勝（0 なら出さない）
     var bestStreak = 0
+    /// 装備込みの能力（nil なら写真だけの能力）
+    var stats: BladeStats?
 
     var body: some View {
         let aura = AuraTier(streak: bestStreak)
@@ -164,7 +166,7 @@ struct BladeCard: View {
                 .padding(.vertical, 2)
                 .background(Capsule().fill(Theme.accent.opacity(0.8)))
                 .foregroundStyle(.white)
-            StatsView(stats: blade.stats)
+            StatsView(stats: stats ?? blade.stats)
             if let credit = blade.credit {
                 CreditLabel(credit: credit)
             }
@@ -186,6 +188,7 @@ struct PlayerBladePicker: View {
     @Binding var selection: Blade?
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(PartsStore.self) private var parts
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -198,7 +201,7 @@ struct PlayerBladePicker: View {
                     LazyHStack(spacing: 12) {
                         ForEach(store.allBlades) { blade in
                             BladeCard(blade: blade, image: store.image(for: blade), isSelected: selection?.id == blade.id,
-                                      bestStreak: enemies.bestStreak(for: blade))
+                                      bestStreak: enemies.bestStreak(for: blade), stats: parts.equipped(blade).stats)
                                 .frame(width: 150)
                                 .onTapGesture { selection = blade }
                         }

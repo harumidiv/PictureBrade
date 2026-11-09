@@ -53,6 +53,15 @@ final class ImpactSound {
         if !player.isPlaying { player.play() }
     }
 
+    /// 衝突以外の効果音（ガチャなど）を鳴らす。間引かずにそのまま鳴らす
+    func play(_ make: (AVAudioFormat) -> AVAudioPCMBuffer?) {
+        guard startIfNeeded(), let buffer = make(format) else { return }
+        let player = players[nextPlayer]
+        nextPlayer = (nextPlayer + 1) % players.count
+        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+        if !player.isPlaying { player.play() }
+    }
+
     /// オーディオセッションを先に有効にしておく（バトルの準備中などに呼ぶ）。
     /// 有効にする処理はメインスレッドを止めることがあるので、裏で行う
     func prepare() {
@@ -203,7 +212,7 @@ final class ImpactSound {
 extension ImpactSound {
     /// duration 秒ぶんの空のバッファを作り、render で1サンプルずつ埋める（time は秒）。
     /// 最後は短くフェードアウトさせて、プツッと切れないようにする
-    fileprivate static func render(
+    static func render(
         duration: Float, format: AVAudioFormat, _ sample: (_ time: Float, _ sampleRate: Float) -> Float
     ) -> AVAudioPCMBuffer? {
         let sampleRate = Float(format.sampleRate)

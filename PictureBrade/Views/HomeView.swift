@@ -13,10 +13,11 @@ struct HomeView: View {
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
     @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
     @Environment(\.requestReview) private var requestReview
     @State private var isAddingBlade = false
     @State private var isShowingCollection = false
-    @State private var isShowingCustomize = false
+    @State private var isShowingGacha = false
     @State private var battleMode: BattleGame.Mode?
     /// ホームに飾る自分のコマ（タップで入れ替わる）
     @AppStorage("homeBladeID") private var homeBladeID = ""
@@ -47,8 +48,8 @@ struct HomeView: View {
             .sheet(isPresented: $isShowingCollection) {
                 BladeCollectionView()
             }
-            .sheet(isPresented: $isShowingCustomize) {
-                CustomizeView(image: heroBlade.flatMap(store.image(for:)), tint: heroBlade?.tint.color ?? .gray)
+            .sheet(isPresented: $isShowingGacha) {
+                GachaView()
             }
             .fullScreenCover(item: $battleMode, onDismiss: requestReviewIfNeeded) { mode in
                 switch mode {
@@ -65,8 +66,18 @@ struct HomeView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
+            // ガチャに使えるポイント（タップでガチャ画面へ）
+            HStack {
+                Spacer()
+                Button {
+                    isShowingGacha = true
+                } label: {
+                    PointsLabel(points: parts.points)
+                }
+                .buttonStyle(.plain)
+            }
             HomeLogo()
-                .padding(.top, 12)
+                .padding(.top, 4)
             Spacer(minLength: 8)
             HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), aura: heroBlade.map(enemies.aura(for:)) ?? .none,
                      onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
@@ -134,17 +145,15 @@ struct HomeView: View {
             DockButton(title: "コマを作る", systemImage: "camera.fill", color: Theme.gold, isHighlighted: !hasBlades) {
                 isAddingBlade = true
             }
-            DockButton(title: "マイコマ", systemImage: "square.grid.2x2.fill", color: .cyan, badge: store.blades.count) {
-                isShowingCollection = true
-            }
+            // ストーリーで新しい報酬を手に入れたら、マイコマで装備できるので光らせる
             DockButton(
-                title: "カスタム",
-                systemImage: "paintpalette.fill",
-                color: .pink,
-                badge: cosmetics.newRewards(enemies: enemies).count,
+                title: "マイコマ", systemImage: "square.grid.2x2.fill", color: .cyan, badge: store.blades.count,
                 isHighlighted: !cosmetics.newRewards(enemies: enemies).isEmpty
             ) {
-                isShowingCustomize = true
+                isShowingCollection = true
+            }
+            DockButton(title: "ガチャ", systemImage: "gift.fill", color: .green, isHighlighted: parts.points >= PartsStore.singleCost) {
+                isShowingGacha = true
             }
             DockButton(title: "ランキング", systemImage: "trophy.fill", color: .orange) {
                 gameCenter.showEndlessLeaderboard()
@@ -534,11 +543,14 @@ private struct DockButton: View {
 private struct BladeCollectionView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
+    @Environment(PartsStore.self) private var parts
     @Environment(\.dismiss) private var dismiss
     @State private var isAddingBlade = false
     @State private var bladeToDelete: Blade?
     /// 削除ボタンを出しているか
     @State private var isEditing = false
+    /// タップして装備画面を開いたコマ
+    @State private var equippingBlade: Blade?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
@@ -567,7 +579,14 @@ private struct BladeCollectionView: View {
                     }
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(store.blades) { blade in
-                            BladeCard(blade: blade, image: store.image(for: blade), bestStreak: enemies.bestStreak(for: blade))
+                            BladeCard(blade: blade, image: store.image(for: blade), bestStreak: enemies.bestStreak(for: blade),
+                                      stats: parts.equipped(blade).stats)
+                                .contentShape(Rectangle())
+                                // 編集中（削除ボタンを出しているとき）は装備画面を開かない
+                                .onTapGesture {
+                                    guard !isEditing else { return }
+                                    equippingBlade = blade
+                                }
                                 .overlay(alignment: .topTrailing) {
                                     if isEditing {
                                         Button {
@@ -592,7 +611,7 @@ private struct BladeCollectionView: View {
                         }
                     }
                     if !store.blades.isEmpty {
-                        Text(isEditing ? "ゴミ箱ボタンで削除できます" : "右上の「編集」か、コマの長押しで削除できます")
+                        Text(isEditing ? "ゴミ箱ボタンで削除できます" : "コマをタップすると装備を変えられます。右上の「編集」か、コマの長押しで削除できます")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.6))
                     }
@@ -606,6 +625,9 @@ private struct BladeCollectionView: View {
                 .padding()
             }
             .background(Theme.background.ignoresSafeArea())
+            .navigationDestination(item: $equippingBlade) { blade in
+                BladeEquipView(blade: blade)
+            }
             .navigationTitle("マイコマ（\(store.blades.count)）")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

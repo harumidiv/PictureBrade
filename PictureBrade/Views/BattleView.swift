@@ -13,6 +13,7 @@ struct BattleView: View {
     @Environment(RewardedAds.self) private var rewardedAds
     @Environment(GameCenterManager.self) private var gameCenter
     @Environment(LifeManager.self) private var life
+    @Environment(PartsStore.self) private var parts
     @Environment(\.dismiss) private var dismiss
     /// ランダム連戦で勝利時に引いた次の相手（表示のたびに変わらないよう保持する）
     @State private var nextEnemy: Enemy?
@@ -23,6 +24,8 @@ struct BattleView: View {
     @State private var earnedRewards: [Reward] = []
     /// この勝利で新しく手に入れたオーラ（ランダム連戦）
     @State private var newAura: AuraTier?
+    /// この試合でもらったポイント（試合が終わるたびに入れ替わる）
+    @State private var earnedPoints = 0
     /// ストーリーで勝利後「ストーリーを進める」を選んだときに呼ぶ（やめるを選んだときは呼ばない）
     var onAdvanceStory: () -> Void = {}
 
@@ -58,7 +61,14 @@ struct BattleView: View {
             if game.mode == .story, phase == .matchOver(playerWon: false) {
                 chargeLife()
             }
-            guard phase == .matchOver(playerWon: true) else { return }
+            guard case .matchOver(let playerWon) = phase else { return }
+            let firstClear = EnemyCatalog.enemy(forBladeID: game.cpu.id).map { !enemies.isDefeated($0) } ?? false
+            // 勝っても負けても、ガチャに使えるポイントがもらえる（勝つと多い）
+            earnedPoints = PartsStore.battleReward(
+                mode: game.mode, won: playerWon, stars: game.earnedStars, winStreak: game.winStreak, firstClear: firstClear
+            )
+            parts.addPoints(earnedPoints)
+            guard playerWon else { return }
             ReviewPrompt.recordWin()
             switch game.mode {
             case .story:
@@ -400,6 +410,15 @@ struct BattleView: View {
             Text(subtitle)
                 .font(.headline)
                 .foregroundStyle(.white)
+            if case .matchOver = game.phase, earnedPoints > 0 {
+                HStack(spacing: 8) {
+                    Text("+\(earnedPoints)pt")
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundStyle(Theme.gold)
+                    PointsLabel(points: parts.points, size: 13)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
             buttons()
                 .controlSize(.large)
         }
@@ -504,7 +523,7 @@ private struct RewardGetBanner: View {
                 Text(reward.title)
                     .font(.title3.weight(.black))
                     .foregroundStyle(.white)
-                Text("ホームの「カスタム」で装備できる")
+                Text("「マイコマ」でコマをタップすると装備できる")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.7))
             }

@@ -12,6 +12,7 @@ struct EndlessSetupView: View {
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
     @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
     @Environment(\.dismiss) private var dismiss
 
     @State private var playerBlade: Blade?
@@ -108,11 +109,12 @@ struct EndlessSetupView: View {
         guard let playerBlade, let playerImage = store.image(for: playerBlade) else { return }
         let opponent = enemies.randomEnemy(level: 1)
         battle = BattleGame(
-            player: playerBlade, playerImage: playerImage,
+            player: parts.equipped(playerBlade), playerImage: playerImage,
             cpu: enemies.blade(for: opponent), cpuImage: enemies.image(for: opponent),
             cpuSkill: opponent.skill, mode: .endless,
-            loadout: cosmetics.validatedLoadout(enemies: enemies),
-            playerAura: enemies.aura(for: playerBlade)
+            loadout: cosmetics.validatedLoadout(for: playerBlade, enemies: enemies),
+            playerAura: enemies.aura(for: playerBlade),
+            playerEquipment: parts.equipment(for: playerBlade)
         )
     }
 }

@@ -144,26 +144,32 @@ enum SceneBuilder {
 
     // MARK: - Blade
 
-    /// skin はストーリーの報酬で手に入る見た目の加工（自分のコマにだけ使う）
-    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float, skin: BladeSkin = .normal) async -> BladeModel {
+    /// skin はストーリーの報酬で手に入る見た目の加工（自分のコマにだけ使う）。
+    /// equipment はガチャで手に入れたボディ（色とトゲ）とシャフト（先端の形）
+    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float, skin: BladeSkin = .normal, equipment: Equipment = Equipment()) async -> BladeModel {
         let root = Entity()
         let spinner = Entity()
         root.addChild(spinner)
         let tipHeight: Float = 0.06
 
-        // 軸（先端）
-        var tipMaterial = PhysicallyBasedMaterial()
-        tipMaterial.baseColor = .init(tint: UIColor(white: 0.9, alpha: 1))
-        tipMaterial.metallic = 1.0
-        tipMaterial.roughness = 0.2
-        let tip = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [tipMaterial])
-        tip.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
-        tip.position.y = -tipHeight / 2
-        spinner.addChild(tip)
+        // シャフト（軸の先端）。どの形でも先端が床（-tipHeight）に届くようにする
+        var metalMaterial = PhysicallyBasedMaterial()
+        metalMaterial.baseColor = .init(tint: UIColor(white: 0.9, alpha: 1))
+        metalMaterial.metallic = 1.0
+        metalMaterial.roughness = 0.2
+        let shaft = equipment.shaft
+        var shaftMaterial = metalMaterial
+        if !shaft.isStandard {
+            shaftMaterial.baseColor = .init(tint: shaft.color.uiColor)
+            shaftMaterial.metallic = 0.6
+            shaftMaterial.roughness = 0.3
+        }
+        spinner.addChild(makeShaft(shaft.tip, radius: radius, tipHeight: tipHeight, material: shaftMaterial))
 
-        // 土台のディスク（画像の平均色）
+        // ボディ（基本のボディは画像の平均色。ガチャのボディはその色になり、トゲが付く）
+        let body = equipment.body
         var discMaterial = PhysicallyBasedMaterial()
-        discMaterial.baseColor = .init(tint: tint.uiColor)
+        discMaterial.baseColor = .init(tint: body.isStandard ? tint.uiColor : body.color.uiColor)
         discMaterial.metallic = 0.7
         discMaterial.roughness = 0.3
         let disc = ModelEntity(mesh: .generateCylinder(height: 0.02, radius: radius * 0.35), materials: [discMaterial])
@@ -171,9 +177,24 @@ enum SceneBuilder {
         spinner.addChild(disc)
 
         // メタルのリング
-        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.42), materials: [tipMaterial])
+        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.42), materials: [metalMaterial])
         ring.position.y = 0.004
         spinner.addChild(ring)
+
+        // ボディのトゲ（顔の画像に隠れないよう、画像のふちの外まで伸ばす）
+        if body.fins > 0 {
+            let finLength = radius * 0.75
+            let finMesh = MeshResource.generateBox(width: finLength, height: 0.016, depth: radius * 0.18, cornerRadius: 0.005)
+            for index in 0..<body.fins {
+                let angle = Float(index) / Float(body.fins) * 2 * .pi
+                let fin = ModelEntity(mesh: finMesh, materials: [discMaterial])
+                let distance = radius * 0.4 + finLength * 0.5
+                fin.position = [cos(angle) * distance, 0.008, sin(angle) * distance]
+                // 少しななめに付けて、回ったときに刃っぽく見せる
+                fin.orientation = simd_quatf(angle: -angle + 0.35, axis: [0, 1, 0])
+                spinner.addChild(fin)
+            }
+        }
 
         // 切り抜き画像（これがコマの「顔」）
         if let cgImage = image.cgImage,
@@ -186,6 +207,39 @@ enum SceneBuilder {
         }
 
         return BladeModel(root: root, spinner: spinner, tipHeight: tipHeight)
+    }
+
+    /// シャフトの先端の形ごとのモデル。y = 0 がボディの底、y = -tipHeight が床に触れる点
+    private static func makeShaft(_ tip: ShaftTip, radius: Float, tipHeight: Float, material: PhysicallyBasedMaterial) -> Entity {
+        let shaft = Entity()
+        switch tip {
+        case .sharp:
+            let cone = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [material])
+            cone.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
+            cone.position.y = -tipHeight / 2
+            shaft.addChild(cone)
+        case .needle:
+            let cone = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.08), materials: [material])
+            cone.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
+            cone.position.y = -tipHeight / 2
+            shaft.addChild(cone)
+        case .flat:
+            let body = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.6, radius: radius * 0.1), materials: [material])
+            body.position.y = -tipHeight * 0.3
+            let foot = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.4, radius: radius * 0.17), materials: [material])
+            foot.position.y = -tipHeight * 0.8
+            shaft.addChild(body)
+            shaft.addChild(foot)
+        case .ball:
+            let ballRadius = tipHeight * 0.45
+            let neck = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.4, radius: radius * 0.08), materials: [material])
+            neck.position.y = -tipHeight * 0.2
+            let ball = ModelEntity(mesh: .generateSphere(radius: ballRadius), materials: [material])
+            ball.position.y = -tipHeight + ballRadius
+            shaft.addChild(neck)
+            shaft.addChild(ball)
+        }
+        return shaft
     }
 
     /// コマの顔の材質。見た目の加工があれば Metal のシェーダーで描き、使えない環境ではそのままの画像にする

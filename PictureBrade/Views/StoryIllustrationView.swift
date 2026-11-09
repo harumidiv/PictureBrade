@@ -112,7 +112,7 @@ private struct SpinningCharacterTop: View {
                 .frame(width: size, height: size * 0.45)
                 .offset(y: size * 0.18)
             Text(character)
-                .font(.system(size: size * 0.6, weight: .black, design: .rounded))
+                .font(.glyph(size: size * 0.6))
                 .foregroundStyle(color)
                 .shadow(color: .white, radius: 1)
                 .shadow(color: color, radius: 8)
@@ -159,7 +159,7 @@ private struct DictionaryScene<Source: View>: View {
                     let y = bookCenter.y - 20 - CGFloat(sin(.pi * min(t * 1.1, 1)) * 0.75 + t * 0.15) * size.height * 0.75
                     // 文字の大きさは毎フレーム変えず、拡大縮小で見せる（フォントの作り直しを避ける）
                     Text(character)
-                        .font(.system(size: 56, weight: .black, design: .rounded))
+                        .font(.glyph(size: 56))
                         .foregroundStyle(color)
                         .shadow(color: .white, radius: 1)
                         .shadow(color: color, radius: 10)

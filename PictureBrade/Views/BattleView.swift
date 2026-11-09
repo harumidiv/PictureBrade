@@ -146,7 +146,7 @@ struct BattleView: View {
                 if let drag {
                     powerMeter(power: BattleGame.power(for: drag))
                 }
-                Text(drag == nil ? "下に引っ張って離すとシュート！" : "離してシュート！")
+                Text(drag == nil ? String(localized: "下に引っ張って離すとシュート！") : String(localized: "離してシュート！"))
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
@@ -215,7 +215,7 @@ struct BattleView: View {
             } else if game.mode == .endless {
                 resultPanel(
                     title: "YOU LOSE…",
-                    subtitle: "記録：\(game.streakBeforeLoss)連勝（最高 \(enemies.bestStreak)連勝）"
+                    subtitle: String(localized: "記録：\(game.streakBeforeLoss)連勝（最高 \(enemies.bestStreak)連勝）")
                 ) {
                     VStack(spacing: 10) {
                         if game.canContinue {
@@ -286,11 +286,11 @@ struct BattleView: View {
     /// ストーリー：倒した相手の最後のひと言を出してストーリー画面へ戻る（次の相手はそこで登場する）
     private var storyVictoryPanel: some View {
         let defeatLine = EnemyCatalog.enemy(forBladeID: game.cpu.id)?.defeat ?? ""
-        return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！") {
+        return resultPanel(title: "YOU WIN!", subtitle: String(localized: "\(game.cpu.name)を撃破！")) {
             VStack(spacing: 12) {
                 VStack(spacing: 4) {
                     StarRating(stars: game.earnedStars, size: 40, animated: true)
-                    Text("\(game.playerScore) - \(game.cpuScore)" + (game.earnedStars == 3 ? "  パーフェクト！" : "  1点も取られずに勝つと★3"))
+                    Text("\(game.playerScore) - \(game.cpuScore)" + (game.earnedStars == 3 ? String(localized: "  パーフェクト！") : String(localized: "  1点も取られずに勝つと★3")))
                         .font(.caption.bold())
                         .foregroundStyle(game.earnedStars == 3 ? Theme.gold : .white.opacity(0.7))
                 }
@@ -320,8 +320,8 @@ struct BattleView: View {
 
     /// ランダム連戦：勝利時に引いた次の相手を見せて連戦する
     private var endlessVictoryPanel: some View {
-        let streak = game.winStreak >= 2 ? "  \(game.winStreak)連勝中！" : ""
-        return resultPanel(title: "YOU WIN!", subtitle: "\(game.cpu.name)を撃破！\(streak)") {
+        let streak = game.winStreak >= 2 ? String(localized: "  \(game.winStreak)連勝中！") : ""
+        return resultPanel(title: "YOU WIN!", subtitle: String(localized: "\(game.cpu.name)を撃破！\(streak)")) {
             VStack(spacing: 10) {
                 if let newAura {
                     AuraGetBanner(tier: newAura, blade: game.player, image: game.playerImage)
@@ -379,7 +379,7 @@ struct BattleView: View {
                     ProgressView().tint(.white)
                 }
                 VStack(spacing: 0) {
-                    Text(rewardedAds.continuation.isReady ? "広告を見てコンティニュー" : "広告を準備中…")
+                    Text(rewardedAds.continuation.isReady ? String(localized: "広告を見てコンティニュー") : String(localized: "広告を準備中…"))
                         .font(.headline)
                     Text("\(game.streakBeforeLoss)連勝を引き継いで再挑戦（1回まで）")
                         .font(.caption2)
@@ -440,10 +440,10 @@ struct BattleView: View {
 
     private func subtitle(for result: BattleGame.RoundResult) -> String {
         switch result {
-        case .playerWins(let finish): "\(game.player.name) が \(finish.points)pt 獲得！"
-        case .cpuWins(let finish): "\(game.cpu.name) が \(finish.points)pt 獲得…"
-        case .draw: "引き分け"
-        case .doubleOver: "両者場外で引き分け"
+        case .playerWins(let finish): String(localized: "\(game.player.name) が \(finish.points)pt 獲得！")
+        case .cpuWins(let finish): String(localized: "\(game.cpu.name) が \(finish.points)pt 獲得…")
+        case .draw: String(localized: "引き分け")
+        case .doubleOver: String(localized: "両者場外で引き分け")
         }
     }
 

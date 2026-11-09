@@ -21,6 +21,13 @@ struct BladeEquipView: View {
         case body = "ボディ"
         case shaft = "シャフト"
         var id: Self { self }
+        var title: String {
+            switch self {
+            case .looks: String(localized: "見た目")
+            case .body: String(localized: "ボディ")
+            case .shaft: String(localized: "シャフト")
+            }
+        }
     }
 
     /// 「見た目」タブの中で、さらに切り替える種類（ストーリーの報酬）
@@ -29,6 +36,13 @@ struct BladeEquipView: View {
         case effect = "エフェクト"
         case sound = "サウンド"
         var id: Self { self }
+        var title: String {
+            switch self {
+            case .skin: String(localized: "見た目")
+            case .effect: String(localized: "エフェクト")
+            case .sound: String(localized: "サウンド")
+            }
+        }
     }
 
     @State private var category: Category = .looks
@@ -104,8 +118,8 @@ struct BladeEquipView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 4) {
-                    slotLabel("ボディ", part: equipment.body)
-                    slotLabel("シャフト", part: equipment.shaft)
+                    slotLabel(String(localized: "ボディ"), part: equipment.body)
+                    slotLabel(String(localized: "シャフト"), part: equipment.shaft)
                 }
                 .padding(10)
                 .allowsHitTesting(false)
@@ -121,7 +135,7 @@ struct BladeEquipView: View {
             BonusStatsView(base: blade.stats, total: equipment.bonus.applied(to: blade.stats))
                 .padding(.horizontal, 4)
             Picker("種類", selection: $category) {
-                ForEach(Category.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(Category.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
         }
@@ -168,7 +182,7 @@ struct BladeEquipView: View {
 
     private func partList(_ kind: PartKind, equipped: Part) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(kind.caption + "。ホームの「ガチャ」で手に入る")
+            Text(kind.caption + String(localized: "。ホームの「ガチャ」で手に入る"))
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
@@ -185,7 +199,7 @@ struct BladeEquipView: View {
     private var looksContent: some View {
         VStack(spacing: 12) {
             Picker("見た目の種類", selection: $looksCategory) {
-                ForEach(LooksCategory.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(LooksCategory.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             switch looksCategory {

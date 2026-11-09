@@ -28,11 +28,11 @@ enum AuraTier: Int, CaseIterable, Comparable {
     var title: String {
         switch self {
         case .none: ""
-        case .bronze: "ブロンズオーラ"
-        case .silver: "シルバーオーラ"
-        case .gold: "ゴールドオーラ"
-        case .crimson: "クリムゾンオーラ"
-        case .rainbow: "レジェンドオーラ"
+        case .bronze: String(localized: "ブロンズオーラ")
+        case .silver: String(localized: "シルバーオーラ")
+        case .gold: String(localized: "ゴールドオーラ")
+        case .crimson: String(localized: "クリムゾンオーラ")
+        case .rainbow: String(localized: "レジェンドオーラ")
         }
     }
 

@@ -13,8 +13,8 @@ struct StatGuideView: View {
                 .font(.headline)
                 .foregroundStyle(.white)
             StatGuideRow(
-                label: "攻撃", color: .red, effect: "当てて削る\n弾き飛ばす",
-                low: "ツルツル", high: "トゲトゲ"
+                label: String(localized: "攻撃"), color: .red, effect: String(localized: "当てて削る\n弾き飛ばす"),
+                low: String(localized: "ツルツル"), high: String(localized: "トゲトゲ")
             ) { isHigh in
                 if isHigh {
                     StarShape(points: 9, innerRatio: 0.5).fill(.red)
@@ -23,22 +23,22 @@ struct StatGuideView: View {
                 }
             }
             StatGuideRow(
-                label: "防御", color: .blue, effect: "重くて\n飛ばされない",
-                low: "小さい", high: "大きい"
+                label: String(localized: "防御"), color: .blue, effect: String(localized: "重くて\n飛ばされない"),
+                low: String(localized: "小さい"), high: String(localized: "大きい")
             ) { isHigh in
                 Ellipse()
                     .fill(isHigh ? .blue : .blue.opacity(0.6))
                     .frame(width: isHigh ? 44 : 18, height: isHigh ? 38 : 22)
             }
             StatGuideRow(
-                label: "持久", color: .green, effect: "長く\n回り続ける",
-                low: "隙間あり", high: "円盤"
+                label: String(localized: "持久"), color: .green, effect: String(localized: "長く\n回り続ける"),
+                low: String(localized: "隙間あり"), high: String(localized: "円盤")
             ) { isHigh in
                 SpinningSilhouette(isDisc: isHigh)
             }
             StatGuideRow(
-                label: "機動", color: .yellow, effect: "速く\n動き回る",
-                low: "くすんだ色", high: "鮮やかな色"
+                label: String(localized: "機動"), color: .yellow, effect: String(localized: "速く\n動き回る"),
+                low: String(localized: "くすんだ色"), high: String(localized: "鮮やかな色")
             ) { isHigh in
                 StarShape(points: 5, innerRatio: 0.75)
                     .fill(isHigh

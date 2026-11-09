@@ -55,7 +55,7 @@ final class BladeStore {
         }
         let blade = Blade(
             id: id,
-            name: name.isEmpty ? "ノーネーム" : name,
+            name: name.isEmpty ? String(localized: "ノーネーム") : name,
             imageFileName: fileName,
             stats: analysis.stats,
             tint: analysis.tint,

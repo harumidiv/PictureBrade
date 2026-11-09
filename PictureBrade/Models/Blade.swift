@@ -18,9 +18,9 @@ nonisolated struct BladeStats: Codable, Hashable {
     static let balanced = BladeStats(attack: 0.6, defense: 0.6, stamina: 0.6, speed: 0.6)
 
     var typeName: String {
-        let values = [("アタック", attack), ("ディフェンス", defense), ("スタミナ", stamina), ("スピード", speed)]
+        let values = [(String(localized: "アタック"), attack), (String(localized: "ディフェンス"), defense), (String(localized: "スタミナ"), stamina), (String(localized: "スピード"), speed)]
         let sorted = values.sorted { $0.1 > $1.1 }
-        if sorted[0].1 - sorted[3].1 < 0.12 { return "バランス" }
+        if sorted[0].1 - sorted[3].1 < 0.12 { return String(localized: "バランス") }
         return sorted[0].0
     }
 }

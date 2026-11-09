@@ -136,7 +136,7 @@ private struct FloatingCharacters: View {
                 ForEach(characters.indices, id: \.self) { index in
                     let (character, color) = characters[index]
                     Text(character)
-                        .font(.system(size: 40, weight: .black, design: .rounded))
+                        .font(.glyph(size: 40))
                         .foregroundStyle(color)
                         .shadow(color: .white, radius: 1)
                         .shadow(color: .black.opacity(0.3), radius: 3, y: 2)

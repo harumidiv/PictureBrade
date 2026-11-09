@@ -330,9 +330,7 @@ enum SceneBuilder {
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
             var attributes: [NSAttributedString.Key: Any]
             if let color {
-                let base = UIFont.systemFont(ofSize: 92, weight: .black)
-                let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 92) } ?? base
-                attributes = [.font: font, .foregroundColor: color, .strokeColor: UIColor.white, .strokeWidth: -5.0]
+                attributes = [.font: UIFont.glyphFont(size: 92), .foregroundColor: color, .strokeColor: UIColor.white, .strokeWidth: -5.0]
             } else {
                 attributes = [.font: UIFont.systemFont(ofSize: 96)]
             }

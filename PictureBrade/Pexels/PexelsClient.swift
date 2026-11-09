@@ -59,11 +59,11 @@ nonisolated struct PexelsClient {
 
         var errorDescription: String? {
             switch self {
-            case .missingAPIKey: "Pexels の APIキーが設定されていません（Config/Secrets.xcconfig）"
-            case .rateLimited: "Pexels の利用回数の上限に達しました。しばらく待ってから試してください"
-            case .http(let code): "Pexels との通信に失敗しました（\(code)）"
-            case .noResults: "写真が見つかりませんでした"
-            case .invalidImage: "写真を読み込めませんでした"
+            case .missingAPIKey: String(localized: "Pexels の APIキーが設定されていません（Config/Secrets.xcconfig）")
+            case .rateLimited: String(localized: "Pexels の利用回数の上限に達しました。しばらく待ってから試してください")
+            case .http(let code): String(localized: "Pexels との通信に失敗しました（\(code)）")
+            case .noResults: String(localized: "写真が見つかりませんでした")
+            case .invalidImage: String(localized: "写真を読み込めませんでした")
             }
         }
     }
@@ -72,14 +72,14 @@ nonisolated struct PexelsClient {
 
     /// 人物系のおすすめ検索ワード（表示名, 検索語）
     static let personQueries: [(label: String, query: String)] = [
-        ("ポートレート", "portrait person"),
-        ("ダンサー", "dancer"),
-        ("アスリート", "athlete"),
-        ("ジャンプ", "person jumping"),
-        ("ミュージシャン", "musician"),
-        ("シェフ", "chef"),
-        ("ビジネス", "businessman"),
-        ("ヒーロー", "superhero costume"),
+        (String(localized: "ポートレート"), "portrait person"),
+        (String(localized: "ダンサー"), "dancer"),
+        (String(localized: "アスリート"), "athlete"),
+        (String(localized: "ジャンプ"), "person jumping"),
+        (String(localized: "ミュージシャン"), "musician"),
+        (String(localized: "シェフ"), "chef"),
+        (String(localized: "ビジネス"), "businessman"),
+        (String(localized: "ヒーロー"), "superhero costume"),
     ]
 
     static var apiKey: String? {

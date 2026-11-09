@@ -22,23 +22,23 @@ enum BladeSkin: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .normal: "そのまま"
-        case .gold: "黄金"
-        case .neon: "ネオン"
-        case .rainbow: "虹色"
-        case .pixel: "ドット絵"
-        case .hologram: "ホログラム"
+        case .normal: String(localized: "そのまま")
+        case .gold: String(localized: "黄金")
+        case .neon: String(localized: "ネオン")
+        case .rainbow: String(localized: "虹色")
+        case .pixel: String(localized: "ドット絵")
+        case .hologram: String(localized: "ホログラム")
         }
     }
 
     var caption: String {
         switch self {
-        case .normal: "写真そのままの姿"
-        case .gold: "ピカピカの金ぴかボディ"
-        case .neon: "ふちが色を変えながら光る"
-        case .rainbow: "虹色がぐるぐる流れる"
-        case .pixel: "レトロゲーム風のドット"
-        case .hologram: "未来っぽい半透明の光"
+        case .normal: String(localized: "写真そのままの姿")
+        case .gold: String(localized: "ピカピカの金ぴかボディ")
+        case .neon: String(localized: "ふちが色を変えながら光る")
+        case .rainbow: String(localized: "虹色がぐるぐる流れる")
+        case .pixel: String(localized: "レトロゲーム風のドット")
+        case .hologram: String(localized: "未来っぽい半透明の光")
         }
     }
 
@@ -67,23 +67,23 @@ enum HitEffect: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .sparks: "火花"
-        case .kanji: "漢字"
-        case .hiragana: "ひらがな"
-        case .hearts: "ハート"
-        case .stars: "キラキラ"
-        case .emoji: "絵文字"
+        case .sparks: String(localized: "火花")
+        case .kanji: String(localized: "漢字")
+        case .hiragana: String(localized: "ひらがな")
+        case .hearts: String(localized: "ハート")
+        case .stars: String(localized: "キラキラ")
+        case .emoji: String(localized: "絵文字")
         }
     }
 
     var caption: String {
         switch self {
-        case .sparks: "熱い金属の火花"
-        case .kanji: "「斬」「撃」が飛び出す"
-        case .hiragana: "あいうえお が飛び散る"
-        case .hearts: "ぶつかるたびにラブラブ"
-        case .stars: "星がキラキラ舞う"
-        case .emoji: "🎉💥😆 で大さわぎ"
+        case .sparks: String(localized: "熱い金属の火花")
+        case .kanji: String(localized: "「斬」「撃」が飛び出す")
+        case .hiragana: String(localized: "あいうえお が飛び散る")
+        case .hearts: String(localized: "ぶつかるたびにラブラブ")
+        case .stars: String(localized: "星がキラキラ舞う")
+        case .emoji: String(localized: "🎉💥😆 で大さわぎ")
         }
     }
 
@@ -92,7 +92,7 @@ enum HitEffect: String, CaseIterable, Identifiable {
         switch self {
         case .sparks: []
         case .kanji: ["斬", "撃", "爆", "轟", "烈", "閃", "破", "衝", "斬", "撃"]
-        case .hiragana: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん".map(String.init)
+        case .hiragana: String(localized: "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん").map(String.init)
         case .hearts: ["❤️", "💖", "💕", "💗", "💘"]
         case .stars: ["⭐️", "✨", "🌟", "💫"]
         case .emoji: ["💥", "🎉", "😆", "🔥", "💯", "😵", "🤩", "👊"]
@@ -128,23 +128,23 @@ enum HitSound: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .metal: "メタル"
-        case .taiko: "太鼓"
+        case .metal: String(localized: "メタル")
+        case .taiko: String(localized: "太鼓")
         case .bell: "鈴"
-        case .pop: "ポップ"
-        case .boing: "びよーん"
-        case .chiptune: "ピコピコ"
+        case .pop: String(localized: "ポップ")
+        case .boing: String(localized: "びよーん")
+        case .chiptune: String(localized: "ピコピコ")
         }
     }
 
     var caption: String {
         switch self {
-        case .metal: "ガキッ！と金属の音"
-        case .taiko: "ドドン！と響く"
-        case .bell: "チリーン♪と澄んだ音"
-        case .pop: "ポンッ！とはじける"
-        case .boing: "バネみたいにびよよん"
-        case .chiptune: "レトロゲームのピコッ"
+        case .metal: String(localized: "ガキッ！と金属の音")
+        case .taiko: String(localized: "ドドン！と響く")
+        case .bell: String(localized: "チリーン♪と澄んだ音")
+        case .pop: String(localized: "ポンッ！とはじける")
+        case .boing: String(localized: "バネみたいにびよよん")
+        case .chiptune: String(localized: "レトロゲームのピコッ")
         }
     }
 
@@ -184,9 +184,9 @@ enum Reward: Hashable, Identifiable {
 
     var kindLabel: String {
         switch self {
-        case .skin: "見た目"
-        case .effect: "エフェクト"
-        case .sound: "サウンド"
+        case .skin: String(localized: "見た目")
+        case .effect: String(localized: "エフェクト")
+        case .sound: String(localized: "サウンド")
         }
     }
 
@@ -196,8 +196,8 @@ enum Reward: Hashable, Identifiable {
     }
 
     var unlockDescription: String {
-        guard let unlock else { return "はじめから" }
-        return "\(unlock.story.title) 第\(unlock.chapter)章クリア"
+        guard let unlock else { return String(localized: "はじめから") }
+        return String(localized: "\(unlock.story.title) 第\(unlock.chapter)章クリア")
     }
 
     /// 章ボスを倒すたびに1つずつもらえる（各ストーリー5章 × 3 = 15個）

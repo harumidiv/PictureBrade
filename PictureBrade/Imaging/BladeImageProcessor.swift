@@ -58,10 +58,8 @@ nonisolated enum BladeImageProcessor {
     /// 文字から敵の「文字コマ」画像を作る（白い縁取り付き）
     static func renderText(_ text: String, color: UIColor) -> UIImage {
         render(text) { fontSize in
-            let base = UIFont.systemFont(ofSize: fontSize, weight: .black)
-            let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: fontSize) } ?? base
-            return [
-                .font: font,
+            [
+                .font: UIFont.glyphFont(size: fontSize),
                 .foregroundColor: color,
                 .strokeColor: UIColor.white,
                 .strokeWidth: -4.0,

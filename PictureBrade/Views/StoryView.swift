@@ -144,8 +144,8 @@ struct StoryView: View {
     }
 
     private var departureTitle: String {
-        guard let selectedStage else { return "エンディングを見る" }
-        return enemies.isDefeated(selectedStage) ? "もう一度戦う" : "いざ出陣！！"
+        guard let selectedStage else { return String(localized: "エンディングを見る") }
+        return enemies.isDefeated(selectedStage) ? String(localized: "もう一度戦う") : String(localized: "いざ出陣！！")
     }
 
     @ViewBuilder
@@ -236,12 +236,12 @@ struct StoryView: View {
         ]
         let lines = story.prologue.enumerated().map { index, text in
             DialogueLine(
-                heading: index == 0 ? "プロローグ" : nil,
+                heading: index == 0 ? String(localized: "プロローグ") : nil,
                 text: text,
                 illustration: illustrations.indices.contains(index) ? illustrations[index] : nil
             )
         }
-        return StoryDialogue(lines: lines, finishTitle: "はじめる")
+        return StoryDialogue(lines: lines, finishTitle: String(localized: "はじめる"))
     }
 
     private var endingDialogue: StoryDialogue {
@@ -249,7 +249,7 @@ struct StoryView: View {
         let lines = story.ending.map { text in
             DialogueLine(text: text, illustration: .returnToDictionary(story))
         }
-        return StoryDialogue(lines: lines, finishTitle: "おわり")
+        return StoryDialogue(lines: lines, finishTitle: String(localized: "おわり"))
     }
 
     /// 相手の登場シーン → バトル
@@ -258,19 +258,19 @@ struct StoryView: View {
         var lines: [DialogueLine] = []
         let isRematch = enemies.isDefeated(enemy)
         if let chapter = story.chapter(for: enemy), chapter.enemies.first == enemy, !isRematch {
-            lines.append(DialogueLine(heading: "第\(chapter.number)章\n\(chapter.title)", text: chapter.intro))
+            lines.append(DialogueLine(heading: String(localized: "第\(chapter.number)章\n\(chapter.title)"), text: chapter.intro))
         }
         if !isRematch {
             if story.isBoss(enemy) {
                 // ボス（王冠の相手）は、黒いシルエットがズシンズシンと近づいてから正体を見せる
                 lines.append(DialogueLine(
-                    text: "……何者かが近づいてくる。",
+                    text: String(localized: "……何者かが近づいてくる。"),
                     portrait: enemies.image(for: enemy),
                     portraitTint: blade.tint.color,
                     silhouette: true
                 ))
             } else {
-                lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+                lines.append(DialogueLine(text: String(localized: "……何者かが近づいてくる。")))
             }
         }
         lines.append(DialogueLine(
@@ -279,7 +279,7 @@ struct StoryView: View {
             portrait: enemies.image(for: enemy),
             portraitTint: blade.tint.color
         ))
-        dialogue = StoryDialogue(lines: lines, finishTitle: "バトル開始！", battleEnemy: enemy, cancelTitle: "逃げる")
+        dialogue = StoryDialogue(lines: lines, finishTitle: String(localized: "バトル開始！"), battleEnemy: enemy, cancelTitle: String(localized: "逃げる"))
     }
 
     private func startPendingBattle() {

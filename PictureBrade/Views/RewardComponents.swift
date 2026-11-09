@@ -40,7 +40,7 @@ struct RewardCard: View {
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .lineLimit(2, reservesSpace: true)
-                Text(isEquipped ? "装備中" : (isUnlocked ? "タップで装備" : "まだ手に入れていない"))
+                Text(isEquipped ? String(localized: "装備中") : (isUnlocked ? String(localized: "タップで装備") : String(localized: "まだ手に入れていない")))
                     .font(.caption2.bold())
                     .foregroundStyle(isEquipped ? .black : .white.opacity(0.6))
                     .padding(.horizontal, 10)
@@ -72,7 +72,7 @@ struct RewardIcon: View {
         switch reward {
         case .effect(let effect):
             Text(effect.icon)
-                .font(.system(size: size, weight: .black, design: .rounded))
+                .font(.glyph(size: size))
                 .foregroundStyle(effect == .kanji ? Color.red : Color.pink)
         case .skin(let skin):
             Image(systemName: skin.systemImage)
@@ -171,7 +171,7 @@ struct EffectBurstView: View {
                 .rotationEffect(.radians(particle.angle))
         } else if burst.effect.isTextGlyph {
             Text(particle.glyph)
-                .font(.system(size: 30, weight: .black, design: .rounded))
+                .font(.glyph(size: 30))
                 .foregroundStyle(particle.color)
                 .shadow(color: .white, radius: 0, x: 1, y: 1)
                 .shadow(color: .white, radius: 0, x: -1, y: -1)

@@ -91,7 +91,8 @@ nonisolated enum RandomCharacterPool {
 
     /// フォントの代替を含めて描画できるか（どのフォントにもない文字は LastResort になる）
     static func isRenderable(_ text: String) -> Bool {
-        let base = UIFont.systemFont(ofSize: 40) as CTFont
+        // 敵の画像と同じフォント（漢字・かな用のヒラギノを補ったもの）で確かめる
+        let base = UIFont.glyphFont(size: 40) as CTFont
         let font = CTFontCreateForString(base, text as CFString, CFRange(location: 0, length: (text as NSString).length))
         return (CTFontCopyPostScriptName(font) as String) != "LastResort"
     }

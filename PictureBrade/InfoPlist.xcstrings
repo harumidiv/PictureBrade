@@ -1,0 +1,414 @@
+{
+  "sourceLanguage" : "ja",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "フォトブレード"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Blade"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "PictureBrade"
+          }
+        }
+      }
+    },
+    "NSUserTrackingUsageDescription" : {
+      "comment" : "Privacy - Tracking Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'utilitza per mostrar-te anuncis adaptats a tu. Encara que no ho permetis, pots fer servir totes les funcions de l'app."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slouží k zobrazování reklam, které se ti hodí. I bez povolení můžeš používat všechny funkce aplikace."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bruges til at vise reklamer, der passer til dig. Appens funktioner virker også, selvom du ikke giver tilladelse."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird verwendet, um dir passende Werbung anzuzeigen. Auch ohne Erlaubnis kannst du alle Funktionen der App nutzen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Χρησιμοποιείται για να σου δείχνουμε διαφημίσεις που σου ταιριάζουν. Ακόμα κι αν δεν το επιτρέψεις, όλες οι λειτουργίες της εφαρμογής είναι διαθέσιμες."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is used to show ads that suit you. All features of the app work even if you don't allow it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se usa para mostrarte anuncios adaptados a ti. Aunque no lo permitas, podrás usar todas las funciones de la app."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Käytetään sinulle sopivien mainosten näyttämiseen. Sovelluksen kaikki toiminnot toimivat, vaikka et antaisi lupaa."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisé pour afficher des publicités adaptées à toi. Même si tu refuses, toutes les fonctions de l'app restent disponibles."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपकी पसंद के विज्ञापन दिखाने के लिए इस्तेमाल होता है। अनुमति न देने पर भी ऐप के सभी फ़ीचर इस्तेमाल किए जा सकते हैं।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koristi se za prikaz oglasa prilagođenih tebi. I bez dopuštenja možeš koristiti sve značajke aplikacije."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arra használjuk, hogy neked szóló reklámokat mutassunk. Ha nem engedélyezed, az app minden funkciója akkor is elérhető."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digunakan untuk menampilkan iklan yang sesuai untukmu. Meski tidak diizinkan, semua fitur aplikasi tetap bisa digunakan."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viene usato per mostrarti pubblicità adatte a te. Anche se non lo consenti, puoi usare tutte le funzioni dell'app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "あなたに合った広告を表示するために使用します。許可しなくてもアプリはすべての機能を使えます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "맞춤형 광고를 표시하는 데 사용됩니다. 허용하지 않아도 앱의 모든 기능을 이용할 수 있습니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digunakan untuk menunjukkan iklan yang sesuai dengan anda. Semua ciri app boleh digunakan walaupun anda tidak membenarkannya."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brukes til å vise reklame som passer for deg. Alle funksjonene i appen virker selv om du ikke gir tillatelse."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wordt gebruikt om advertenties te tonen die bij je passen. Ook zonder toestemming kun je alle functies van de app gebruiken."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Używane do wyświetlania reklam dopasowanych do Ciebie. Nawet bez zgody możesz korzystać ze wszystkich funkcji aplikacji."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usado para mostrar anúncios do seu interesse. Mesmo sem permitir, você pode usar todos os recursos do app."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizado para mostrar anúncios do teu interesse. Mesmo que não autorizes, podes usar todas as funcionalidades da app."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folosit pentru a-ți arăta reclame potrivite. Chiar dacă nu permiți, poți folosi toate funcțiile aplicației."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используется для показа подходящей тебе рекламы. Даже без разрешения все функции приложения доступны."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Používa sa na zobrazovanie reklám, ktoré sa ti hodia. Aj bez povolenia môžeš používať všetky funkcie aplikácie."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Används för att visa annonser som passar dig. Appens alla funktioner fungerar även om du inte tillåter det."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ใช้เพื่อแสดงโฆษณาที่เหมาะกับคุณ แม้ไม่อนุญาต ก็ยังใช้ฟีเจอร์ทั้งหมดของแอปได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sana uygun reklamlar göstermek için kullanılır. İzin vermesen de uygulamanın tüm özelliklerini kullanabilirsin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використовується для показу реклами, яка вам підходить. Навіть без дозволу всі функції застосунку доступні."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Được dùng để hiển thị quảng cáo phù hợp với bạn. Dù không cho phép, bạn vẫn dùng được mọi tính năng của ứng dụng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于显示适合你的广告。即使不允许，也能使用 App 的所有功能。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用於顯示適合你的廣告。即使不允許，也能使用 App 的所有功能。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

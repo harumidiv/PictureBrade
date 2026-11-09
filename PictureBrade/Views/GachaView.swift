@@ -96,8 +96,8 @@ struct GachaView: View {
                 }
             }
             HStack(spacing: 10) {
-                drawButton(kind, count: 1, cost: PartsStore.singleCost, title: "1回")
-                drawButton(kind, count: 10, cost: PartsStore.tenCost, title: "10連（SR以上1つ確定）")
+                drawButton(kind, count: 1, cost: PartsStore.singleCost, title: String(localized: "1回"))
+                drawButton(kind, count: 10, cost: PartsStore.tenCost, title: String(localized: "10連（SR以上1つ確定）"))
             }
             adDrawButton(kind)
         }
@@ -153,7 +153,7 @@ struct GachaView: View {
                 } else {
                     ProgressView().tint(.black)
                 }
-                Text(ad.isReady ? "広告を見て1回無料" : "広告を準備中…")
+                Text(ad.isReady ? String(localized: "広告を見て1回無料") : String(localized: "広告を準備中…"))
                     .font(.subheadline.bold())
             }
             .frame(maxWidth: .infinity)
@@ -336,7 +336,7 @@ struct PartCard: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Text(isOwned ? part.bonus.summary : "ガチャで手に入る")
+                    Text(isOwned ? part.bonus.summary : String(localized: "ガチャで手に入る"))
                         .font(.system(size: 10))
                         .foregroundStyle(.white.opacity(0.7))
                         .lineLimit(1)
@@ -361,10 +361,10 @@ struct BonusStatsView: View {
 
     var body: some View {
         VStack(spacing: 5) {
-            row("攻撃", base.attack, total.attack, .red)
-            row("防御", base.defense, total.defense, .blue)
-            row("持久", base.stamina, total.stamina, .green)
-            row("機動", base.speed, total.speed, .yellow)
+            row(String(localized: "攻撃"), base.attack, total.attack, .red)
+            row(String(localized: "防御"), base.defense, total.defense, .blue)
+            row(String(localized: "持久"), base.stamina, total.stamina, .green)
+            row(String(localized: "機動"), base.speed, total.speed, .yellow)
         }
     }
 
@@ -499,7 +499,7 @@ private struct GachaResultView: View {
 
     private var resultsContent: some View {
         VStack(spacing: 18) {
-            Text(isSingle ? "ゲット！" : "\(results.count)連の結果")
+            Text(isSingle ? String(localized: "ゲット！") : String(localized: "\(results.count)連の結果"))
                 .font(.system(size: 32, weight: .black, design: .rounded))
                 .foregroundStyle(LinearGradient(colors: [Theme.gold, Theme.accent], startPoint: .top, endPoint: .bottom))
                 .shadow(color: .black, radius: 4)
@@ -562,7 +562,7 @@ private struct GachaResultView: View {
                 withAnimation(.spring(duration: 0.3)) { capsuleRarity = .ultraRare }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
-            withAnimation(.spring(duration: 0.35, bounce: 0.5)) { announce = best == .ultraRare ? "SSR確定!!" : "!?" }
+            withAnimation(.spring(duration: 0.35, bounce: 0.5)) { announce = best == .ultraRare ? String(localized: "SSR確定!!") : "!?" }
             guard await wait(chargeTime * 0.4) else { return }
         } else {
             guard await wait(chargeTime) else { return }

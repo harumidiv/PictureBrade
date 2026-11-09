@@ -124,10 +124,10 @@ struct StatsView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            StatBar(label: "攻撃", value: stats.attack, color: .red)
-            StatBar(label: "防御", value: stats.defense, color: .blue)
-            StatBar(label: "持久", value: stats.stamina, color: .green)
-            StatBar(label: "機動", value: stats.speed, color: .yellow)
+            StatBar(label: String(localized: "攻撃"), value: stats.attack, color: .red)
+            StatBar(label: String(localized: "防御"), value: stats.defense, color: .blue)
+            StatBar(label: String(localized: "持久"), value: stats.stamina, color: .green)
+            StatBar(label: String(localized: "機動"), value: stats.speed, color: .yellow)
         }
     }
 }

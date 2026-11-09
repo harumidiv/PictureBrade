@@ -7,7 +7,7 @@ import GameKit
 import Observation
 import UIKit
 
-/// Game Center へのサインインと、ランダム連戦の最高連勝ランキング・連勝の実績
+/// Game Center へのサインインと、ランダム連戦の最高連勝ランキング・連勝とストーリークリアの実績
 @Observable
 final class GameCenterManager {
     /// App Store Connect で作成するリーダーボードの ID（最高スコアを保持する設定にする）
@@ -22,12 +22,17 @@ final class GameCenterManager {
         ("photoblade.endless.streak100", 100),
     ]
 
+    /// App Store Connect で作成する、ストーリーをクリアしたときの実績の ID
+    static func storyAchievementID(_ story: StoryKind) -> String {
+        "photoblade.story.\(story.rawValue)"
+    }
+
     private(set) var isAuthenticated = false
     /// Game Center に記録済みの実績の達成率（0...100）。同じ値を何度も送らないために覚えておく
     @ObservationIgnored private var achievementProgress: [String: Double] = [:]
 
     /// 起動時に一度呼ぶ。必要なら Game Center のサインイン画面を出す
-    func authenticate(bestStreak: Int) {
+    func authenticate(bestStreak: Int, clearedStories: @escaping @MainActor () -> [StoryKind]) {
         GKLocalPlayer.local.authenticateHandler = { [weak self] viewController, _ in
             Task { @MainActor in
                 guard let self else { return }
@@ -42,6 +47,8 @@ final class GameCenterManager {
                 if bestStreak > 0 {
                     self.submitEndless(streak: bestStreak)
                 }
+                // 実績を追加する前にクリアしていたストーリーも、ここで実績にする
+                self.reportStoryCleared(clearedStories())
             }
         }
     }
@@ -58,13 +65,24 @@ final class GameCenterManager {
 
     /// 連勝の実績を送る。まだの実績も途中の達成率を送るので、Game Center で「あと何連勝」かがわかる
     private func reportStreakAchievements(streak: Int) {
-        let achievements: [GKAchievement] = Self.streakAchievements.compactMap { item in
-            let percent = min(100, Double(streak) / Double(item.streak) * 100)
+        report(Self.streakAchievements.map { item in
+            (item.id, min(100, Double(streak) / Double(item.streak) * 100))
+        })
+    }
+
+    /// クリアしたストーリーの実績を送る
+    func reportStoryCleared(_ stories: [StoryKind]) {
+        guard isAuthenticated else { return }
+        report(stories.map { (Self.storyAchievementID($0), 100) })
+    }
+
+    private func report(_ progress: [(id: String, percent: Double)]) {
+        let achievements: [GKAchievement] = progress.compactMap { item in
             // 達成率は下がらないので、前より進んだときだけ送る
-            guard percent > achievementProgress[item.id, default: 0] else { return nil }
-            achievementProgress[item.id] = percent
+            guard item.percent > achievementProgress[item.id, default: 0] else { return nil }
+            achievementProgress[item.id] = item.percent
             let achievement = GKAchievement(identifier: item.id)
-            achievement.percentComplete = percent
+            achievement.percentComplete = item.percent
             achievement.showsCompletionBanner = true
             return achievement
         }
@@ -72,7 +90,7 @@ final class GameCenterManager {
         let ids = achievements.map(\.identifier)
         GKAchievement.report(achievements) { [weak self] error in
             guard error != nil else { return }
-            // 送れなかったときは、次に勝ったときにもう一度送る
+            // 送れなかったときは、次に送るときにもう一度送る
             Task { @MainActor [weak self] in
                 ids.forEach { self?.achievementProgress[$0] = nil }
             }

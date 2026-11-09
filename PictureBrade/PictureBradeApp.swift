@@ -36,7 +36,9 @@ struct PictureBradeApp: App {
                         // 広告の読み込みより先に ATT の選択を済ませ、Game Center のログイン画面とも重ならないようにする
                         await TrackingAuthorization.requestIfNeeded()
                         rewardedAds.start()
-                        gameCenter.authenticate(bestStreak: enemies.bestStreak)
+                        gameCenter.authenticate(bestStreak: enemies.bestStreak) {
+                            StoryKind.allCases.filter(enemies.isStoryCleared)
+                        }
                     }
                 }
                 .preferredColorScheme(.dark)

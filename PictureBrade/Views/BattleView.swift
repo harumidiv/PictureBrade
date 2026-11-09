@@ -76,6 +76,9 @@ struct BattleView: View {
                     earnedRewards = Reward.rewards(for: enemy)
                 }
                 enemies.markDefeated(bladeID: game.cpu.id, stars: game.earnedStars)
+                if let enemy = EnemyCatalog.enemy(forBladeID: game.cpu.id), enemies.isStoryCleared(enemy.story) {
+                    gameCenter.reportStoryCleared([enemy.story])
+                }
             case .endless:
                 let auraBefore = enemies.aura(for: game.player)
                 enemies.recordStreak(game.winStreak, blade: game.player)

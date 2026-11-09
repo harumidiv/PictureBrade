@@ -2,7 +2,7 @@
 //  main.swift
 //  MakeAchievementImages
 //
-//  Game Center の連勝の実績画像（1024×1024 の PNG、透明なし）を作る。
+//  Game Center の実績画像（連勝・ストーリークリア。1024×1024 の PNG、透明なし）を作る。
 //  色はアプリのオーラ（PictureBrade/Models/Aura.swift）とそろえてある。
 //
 //  使い方：swift tools/MakeAchievementImages/main.swift [出力先フォルダ]
@@ -13,21 +13,45 @@ import AppKit
 import CoreText
 
 struct Tier {
-    let streak: Int
     let id: String
     let color: (CGFloat, CGFloat, CGFloat)
     let isRainbow: Bool
     /// 外側の光の筋の数（強い実績ほど多い）
     let rays: Int
     let stars: Int
+    /// メダルの真ん中に大きく描く文字（連勝数、またはストーリーを表す文字）
+    let symbol: String
+    let symbolSize: CGFloat
+    /// 文字のふちの太さ（画数の多い漢字は細くしないとつぶれる）
+    let symbolStroke: CGFloat
+    /// 絵文字はふちを付けずにそのまま描く
+    let isEmoji: Bool
+    /// 下に添える言葉
+    let caption: String
+}
+
+/// ランダム連戦の連勝
+func streakTier(_ streak: Int, color: (CGFloat, CGFloat, CGFloat), isRainbow: Bool = false, rays: Int, stars: Int) -> Tier {
+    Tier(id: "photoblade.endless.streak\(streak)", color: color, isRainbow: isRainbow, rays: rays, stars: stars,
+         symbol: "\(streak)", symbolSize: streak >= 100 ? 270 : 330, symbolStroke: 16, isEmoji: false, caption: "連勝")
+}
+
+/// ストーリーのクリア。ID は GameCenterManager.storyAchievementID と同じ（StoryKind の rawValue）
+func storyTier(_ story: String, symbol: String, size: CGFloat, stroke: CGFloat = 16, color: (CGFloat, CGFloat, CGFloat), isEmoji: Bool = false) -> Tier {
+    Tier(id: "photoblade.story.\(story)", color: color, isRainbow: false, rays: 20, stars: 3,
+         symbol: symbol, symbolSize: size, symbolStroke: stroke, isEmoji: isEmoji, caption: "クリア")
 }
 
 let tiers = [
-    Tier(streak: 5, id: "photoblade.endless.streak5", color: (0.95, 0.55, 0.25), isRainbow: false, rays: 12, stars: 1),
-    Tier(streak: 10, id: "photoblade.endless.streak10", color: (0.7, 0.85, 1.0), isRainbow: false, rays: 14, stars: 2),
-    Tier(streak: 20, id: "photoblade.endless.streak20", color: (1.0, 0.82, 0.2), isRainbow: false, rays: 16, stars: 3),
-    Tier(streak: 50, id: "photoblade.endless.streak50", color: (1.0, 0.2, 0.25), isRainbow: false, rays: 18, stars: 4),
-    Tier(streak: 100, id: "photoblade.endless.streak100", color: (1.0, 0.6, 1.0), isRainbow: true, rays: 24, stars: 5),
+    streakTier(5, color: (0.95, 0.55, 0.25), rays: 12, stars: 1),
+    streakTier(10, color: (0.7, 0.85, 1.0), rays: 14, stars: 2),
+    streakTier(20, color: (1.0, 0.82, 0.2), rays: 16, stars: 3),
+    streakTier(50, color: (1.0, 0.2, 0.25), rays: 18, stars: 4),
+    streakTier(100, color: (1.0, 0.6, 1.0), isRainbow: true, rays: 24, stars: 5),
+    // 漢字は最後の敵「覇」、ひらがなは「あ」、絵文字は宇宙の果ての母船
+    storyTier("kanji", symbol: "覇", size: 290, stroke: 7, color: (0.85, 0.25, 0.2)),
+    storyTier("hiragana", symbol: "あ", size: 320, color: (1.0, 0.5, 0.72)),
+    storyTier("emoji", symbol: "🛸", size: 460, color: (0.35, 0.85, 0.55), isEmoji: true),
 ]
 
 let side: CGFloat = 1024
@@ -99,6 +123,19 @@ func drawText(_ ctx: CGContext, _ text: String, size: CGFloat, centerY: CGFloat,
     ctx.restoreGState()
     ctx.textPosition = origin
     CTLineDraw(fillLine, ctx)
+}
+
+/// 絵文字を影付きで中央に描く（ふちを付けると絵がつぶれるので付けない）
+func drawEmoji(_ ctx: CGContext, _ text: String, size: CGFloat, centerY: CGFloat) {
+    let font = NSFont(name: "AppleColorEmoji", size: size) ?? NSFont.systemFont(ofSize: size)
+    let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+    let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+    let origin = CGPoint(x: center.x - bounds.midX, y: centerY - bounds.midY)
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 18, color: rgb(0, 0, 0, 0.6))
+    ctx.textPosition = origin
+    CTLineDraw(line, ctx)
+    ctx.restoreGState()
 }
 
 func render(_ tier: Tier) -> Data {
@@ -187,11 +224,14 @@ func render(_ tier: Tier) -> Data {
         star(ctx, at: point, radius: tier.stars == 5 && i == 2 ? 62 : 50, color: starColor)
     }
 
-    // 数字と「連勝」
-    let numberSize: CGFloat = tier.streak >= 100 ? 270 : 330
+    // 真ん中の文字と、下の言葉（「連勝」「クリア」）
     let outline = tier.isRainbow ? rgb(0.45, 0.15, 0.6) : rgb(mix(c, with: (0, 0, 0), 0.55).0, mix(c, with: (0, 0, 0), 0.55).1, mix(c, with: (0, 0, 0), 0.55).2)
-    drawText(ctx, "\(tier.streak)", size: numberSize, centerY: center.y + 40, fill: rgb(1, 1, 1), stroke: outline, strokeWidth: 16)
-    drawText(ctx, "連勝", size: 120, centerY: center.y - 190, fill: rgb(1, 0.92, 0.55), stroke: rgb(0.1, 0.05, 0.2), strokeWidth: 14)
+    if tier.isEmoji {
+        drawEmoji(ctx, tier.symbol, size: tier.symbolSize, centerY: center.y + 40)
+    } else {
+        drawText(ctx, tier.symbol, size: tier.symbolSize, centerY: center.y + 40, fill: rgb(1, 1, 1), stroke: outline, strokeWidth: tier.symbolStroke)
+    }
+    drawText(ctx, tier.caption, size: 120, centerY: center.y - 190, fill: rgb(1, 0.92, 0.55), stroke: rgb(0.1, 0.05, 0.2), strokeWidth: 14)
 
     let image = ctx.makeImage()!
     let rep = NSBitmapImageRep(cgImage: image)

@@ -14,6 +14,9 @@ import CoreText
 
 struct Tier {
     let id: String
+    /// 書き出すファイル名（拡張子なし）。同じ実績で言語ごとに画像を分けるときに変える
+    var fileName: String { id + fileSuffix }
+    var fileSuffix = ""
     let color: (CGFloat, CGFloat, CGFloat)
     let isRainbow: Bool
     /// 外側の光の筋の数（強い実績ほど多い）
@@ -36,23 +39,27 @@ func streakTier(_ streak: Int, color: (CGFloat, CGFloat, CGFloat), isRainbow: Bo
          symbol: "\(streak)", symbolSize: streak >= 100 ? 270 : 330, symbolStroke: 16, isEmoji: false, caption: "連勝")
 }
 
-/// ストーリーのクリア。ID は GameCenterManager.storyAchievementID と同じ（StoryKind の rawValue）
-func storyTier(_ story: String, symbol: String, size: CGFloat, stroke: CGFloat = 16, color: (CGFloat, CGFloat, CGFloat), isEmoji: Bool = false) -> Tier {
-    Tier(id: "photoblade.story.\(story)", color: color, isRainbow: false, rays: 20, stars: 3,
-         symbol: symbol, symbolSize: size, symbolStroke: stroke, isEmoji: isEmoji, caption: "クリア")
+/// ストーリーのクリア。ID は GameCenterManager.storyAchievementID と同じ（StoryKind の rawValue）。
+/// 日本語用（「クリア」）と、それ以外の言語用（「CLEAR」、ファイル名の末尾が .global）の2枚を作る
+func storyTiers(_ story: String, symbol: String, size: CGFloat, stroke: CGFloat = 16, color: (CGFloat, CGFloat, CGFloat), isEmoji: Bool = false) -> [Tier] {
+    [("", "クリア"), (".global", "CLEAR")].map { suffix, caption in
+        Tier(id: "photoblade.story.\(story)", fileSuffix: suffix, color: color, isRainbow: false, rays: 20, stars: 3,
+             symbol: symbol, symbolSize: size, symbolStroke: stroke, isEmoji: isEmoji, caption: caption)
+    }
 }
 
-let tiers = [
+let tiers: [Tier] = [
     streakTier(5, color: (0.95, 0.55, 0.25), rays: 12, stars: 1),
     streakTier(10, color: (0.7, 0.85, 1.0), rays: 14, stars: 2),
     streakTier(20, color: (1.0, 0.82, 0.2), rays: 16, stars: 3),
     streakTier(50, color: (1.0, 0.2, 0.25), rays: 18, stars: 4),
     streakTier(100, color: (1.0, 0.6, 1.0), isRainbow: true, rays: 24, stars: 5),
     // 漢字は最後の敵「覇」、ひらがなは「あ」、絵文字は宇宙の果ての母船
-    storyTier("kanji", symbol: "覇", size: 290, stroke: 7, color: (0.85, 0.25, 0.2)),
-    storyTier("hiragana", symbol: "あ", size: 320, color: (1.0, 0.5, 0.72)),
-    storyTier("emoji", symbol: "🛸", size: 460, color: (0.35, 0.85, 0.55), isEmoji: true),
-]
+] + [
+    storyTiers("kanji", symbol: "覇", size: 290, stroke: 7, color: (0.85, 0.25, 0.2)),
+    storyTiers("hiragana", symbol: "あ", size: 320, color: (1.0, 0.5, 0.72)),
+    storyTiers("emoji", symbol: "🛸", size: 460, color: (0.35, 0.85, 0.55), isEmoji: true),
+].flatMap { $0 }
 
 let side: CGFloat = 1024
 let center = CGPoint(x: side / 2, y: side / 2)
@@ -242,7 +249,7 @@ func render(_ tier: Tier) -> Data {
 let output = URL(fileURLWithPath: CommandLine.arguments.dropFirst().first ?? "AppStoreAssets/Achievements", isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 for tier in tiers {
-    let url = output.appendingPathComponent("\(tier.id).png")
+    let url = output.appendingPathComponent("\(tier.fileName).png")
     try render(tier).write(to: url)
     print("書き出し: \(url.path)")
 }

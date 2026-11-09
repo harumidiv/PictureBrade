@@ -122,10 +122,29 @@ final class BattleGame {
 
     /// 一度に出す火花の上限（重くならないように）
     private static let maxSparkStreaks = 220
+
+    /// 火花の代わりに飛び散る文字（ハートやひらがな）1つ
+    private struct GlyphParticle {
+        let entity: ModelEntity
+        var velocity: SIMD3<Float>
+        var age: Float = 0
+        let life: Float
+        var roll: Float
+        let rollSpeed: Float
+        let size: Float
+    }
+
+    @ObservationIgnored private var glyphParticles: [GlyphParticle] = []
+    @ObservationIgnored private var glyphMaterials: [UnlitMaterial] = []
+    private static let maxGlyphParticles = 80
     @ObservationIgnored private var accumulator: Float = 0
     @ObservationIgnored private var steering: SIMD2<Float> = .zero
     @ObservationIgnored private var finishDelay: Float = 0
     @ObservationIgnored private var pendingResult: RoundResult?
+    /// ラウンドの勝者（決まったら、勝ったとわかるように回り続けさせる）
+    @ObservationIgnored private var winnerIndex: Int?
+    /// 勝者の回転はこれより減らさない
+    @ObservationIgnored private var winnerSpinFloor: Float = 0
     @ObservationIgnored private var lastHapticTime: Float = 0
     @ObservationIgnored private var time: Float = 0
     @ObservationIgnored private var updateSubscription: EventSubscription?
@@ -137,9 +156,12 @@ final class BattleGame {
     private static let cpuIndex = 1
 
     let mode: Mode
+    /// ストーリーの報酬で選んだ見た目・エフェクト・音
+    let loadout: Loadout
 
-    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story) {
+    init(player: Blade, playerImage: UIImage, cpu: Blade, cpuImage: UIImage, cpuSkill: Float = 0.5, mode: Mode = .story, loadout: Loadout = Loadout()) {
         self.mode = mode
+        self.loadout = loadout
         self.player = player
         self.cpu = cpu
         self.playerImage = playerImage
@@ -168,6 +190,8 @@ final class BattleGame {
 
     func setUp(content: inout RealityViewCameraContent) async {
         content.camera = .virtual
+        // 最初にぶつかったときに音が遅れないよう、先に音の準備をしておく
+        ImpactSound.shared.prepare()
         content.add(worldRoot)
 
         applyFieldOfView()
@@ -194,10 +218,13 @@ final class BattleGame {
             TopState(stats: player.stats, position: Self.playerStart),
             TopState(stats: cpu.stats, position: Self.cpuStart),
         ]
-        let playerModel = await SceneBuilder.makeBlade(image: playerImage, tint: player.tint, radius: tops[0].radius)
+        let playerModel = await SceneBuilder.makeBlade(image: playerImage, tint: player.tint, radius: tops[0].radius, skin: loadout.skin)
         let cpuModel = await SceneBuilder.makeBlade(image: cpuImage, tint: cpu.tint, radius: tops[1].radius)
         models = [playerModel, cpuModel]
         models.forEach { worldRoot.addChild($0.root) }
+        if loadout.effect != .sparks {
+            glyphMaterials = await SceneBuilder.glyphMaterials(for: loadout.effect)
+        }
 
         updateSubscription = content.subscribe(to: SceneEvents.Update.self) { [weak self] event in
             self?.update(dt: Float(event.deltaTime))
@@ -320,6 +347,7 @@ final class BattleGame {
         tops[Self.cpuIndex] = TopState(stats: cpu.stats, position: Self.cpuStart)
         tops[Self.cpuIndex].rushCooldown = 2
         pendingResult = nil
+        winnerIndex = nil
         finishDelay = 0
         steering = .zero
         accumulator = 0
@@ -360,10 +388,20 @@ final class BattleGame {
             accumulator -= BattlePhysics.fixedStep
             let events = BattlePhysics.step(&tops, dt: BattlePhysics.fixedStep, pocketRotation: pocketRotation)
             events.forEach(handleCollision)
+            keepWinnerSpinning(dt: BattlePhysics.fixedStep)
         }
         if phase == .battle {
             checkFinish(dt: dt)
         }
+    }
+
+    /// 勝者は止まらずに回り続ける。結果が出たあとは、ゆっくりスタジアムの中央に落ち着かせる
+    private func keepWinnerSpinning(dt: Float) {
+        guard let index = winnerIndex, tops[index].isActive else { return }
+        tops[index].spin = max(tops[index].spin, winnerSpinFloor)
+        guard phase != .battle else { return }
+        tops[index].velocity -= tops[index].position * 1.5 * dt
+        tops[index].velocity *= max(0, 1 - 1.5 * dt)
     }
 
     /// 発射前もポケットは回り続ける（タイミングを見て発射する楽しみになる）
@@ -403,6 +441,15 @@ final class BattleGame {
                 pendingResult = .playerWins(finish)
             case (_?, _?):
                 pendingResult = .draw
+            }
+            switch pendingResult {
+            case .playerWins: winnerIndex = Self.playerIndex
+            case .cpuWins: winnerIndex = Self.cpuIndex
+            default: winnerIndex = nil
+            }
+            if let winnerIndex {
+                // ふらふらにならない程度の回転は残す
+                winnerSpinFloor = max(tops[winnerIndex].spin, 0.3)
             }
             finishDelay = 1.2
             haptics.impactOccurred(intensity: 1)
@@ -445,8 +492,12 @@ final class BattleGame {
         worldRoot.addChild(spark)
         sparks.append((spark, 0))
 
-        emitSparks(at: spark.position, strength: event.strength)
-        ImpactSound.shared.play(strength: event.strength, isWall: event.isWall)
+        if glyphMaterials.isEmpty {
+            emitSparks(at: spark.position, strength: event.strength)
+        } else {
+            emitGlyphs(at: spark.position, strength: event.strength)
+        }
+        ImpactSound.shared.play(strength: event.strength, isWall: event.isWall, style: loadout.sound)
 
         cameraShake = max(cameraShake, min(event.strength * 0.02, 0.06))
         if time - lastHapticTime > 0.08 {
@@ -507,8 +558,63 @@ final class BattleGame {
         }
     }
 
+    /// ぶつかった点からハートや文字をふわっと飛び出させる。強くぶつかるほど多く、大きい
+    private func emitGlyphs(at point: SIMD3<Float>, strength: Float) {
+        let power = min(max(strength, 0.2), 3)
+        let count = min(Int(3 + 3 * power), Self.maxGlyphParticles - glyphParticles.count)
+        guard count > 0 else { return }
+        for _ in 0..<count {
+            let angle = Float.random(in: 0..<(2 * .pi))
+            let elevation = Float.random(in: 0.5...1.3)
+            let direction = SIMD3<Float>(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
+            let speed = Float.random(in: 0.5...1.1) * (0.8 + 0.3 * power)
+            let entity = ModelEntity(mesh: SceneBuilder.glyphMesh, materials: [glyphMaterials.randomElement()!])
+            entity.position = point
+            entity.scale = .zero
+            worldRoot.addChild(entity)
+            glyphParticles.append(GlyphParticle(
+                entity: entity,
+                velocity: direction * speed,
+                life: .random(in: 0.6...1.0),
+                roll: .random(in: -0.5...0.5),
+                rollSpeed: .random(in: -4...4),
+                size: Float.random(in: 0.7...1.1) * (0.8 + 0.25 * power)
+            ))
+        }
+    }
+
+    private func updateGlyphParticles(dt: Float) {
+        // 火花より軽く、ふわふわ落ちる
+        let gravity: Float = 1.6
+        let facing = camera.orientation(relativeTo: worldRoot)
+        for index in glyphParticles.indices.reversed() {
+            var particle = glyphParticles[index]
+            particle.age += dt
+            if particle.age > particle.life {
+                particle.entity.removeFromParent()
+                glyphParticles.remove(at: index)
+                continue
+            }
+            particle.velocity.y -= gravity * dt
+            particle.velocity *= 1 - 2.2 * dt
+            particle.entity.position += particle.velocity * dt
+            particle.roll += particle.rollSpeed * dt
+
+            // ポンと大きくなってから、消える前に縮む
+            let progress = particle.age / particle.life
+            let popIn = min(1, particle.age / 0.08)
+            let overshoot = 1 + 0.25 * sin(min(1, particle.age / 0.2) * .pi)
+            let shrink = progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1
+            particle.entity.scale = .init(repeating: particle.size * popIn * overshoot * shrink)
+            // 板の表をカメラに向け、くるくる回す
+            particle.entity.setOrientation(facing * simd_quatf(angle: particle.roll, axis: [0, 0, 1]), relativeTo: worldRoot)
+            glyphParticles[index] = particle
+        }
+    }
+
     private func updateEffects(dt: Float) {
         updateSparkStreaks(dt: dt)
+        updateGlyphParticles(dt: dt)
         for index in sparks.indices.reversed() {
             sparks[index].age += dt
             let entity = sparks[index].entity

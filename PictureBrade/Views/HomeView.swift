@@ -12,9 +12,11 @@ struct HomeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(CosmeticStore.self) private var cosmetics
     @Environment(\.requestReview) private var requestReview
     @State private var isAddingBlade = false
     @State private var isShowingCollection = false
+    @State private var isShowingCustomize = false
     @State private var battleMode: BattleGame.Mode?
     /// ホームに飾る自分のコマ（タップで入れ替わる）
     @AppStorage("homeBladeID") private var homeBladeID = ""
@@ -44,6 +46,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $isShowingCollection) {
                 BladeCollectionView()
+            }
+            .sheet(isPresented: $isShowingCustomize) {
+                CustomizeView(image: heroBlade.flatMap(store.image(for:)), tint: heroBlade?.tint.color ?? .gray)
             }
             .fullScreenCover(item: $battleMode, onDismiss: requestReviewIfNeeded) { mode in
                 switch mode {
@@ -130,6 +135,15 @@ struct HomeView: View {
             }
             DockButton(title: "マイコマ", systemImage: "square.grid.2x2.fill", color: .cyan, badge: store.blades.count) {
                 isShowingCollection = true
+            }
+            DockButton(
+                title: "カスタム",
+                systemImage: "paintpalette.fill",
+                color: .pink,
+                badge: cosmetics.newRewards(enemies: enemies).count,
+                isHighlighted: !cosmetics.newRewards(enemies: enemies).isEmpty
+            ) {
+                isShowingCustomize = true
             }
             DockButton(title: "ランキング", systemImage: "trophy.fill", color: .orange) {
                 gameCenter.showEndlessLeaderboard()

@@ -14,6 +14,7 @@ struct PictureBradeApp: App {
     @State private var rewardedAds = RewardedAds()
     @State private var gameCenter = GameCenterManager()
     @State private var life = LifeManager()
+    @State private var cosmetics = CosmeticStore()
     @State private var didStartServices = false
     @Environment(\.scenePhase) private var scenePhase
 
@@ -25,6 +26,7 @@ struct PictureBradeApp: App {
                 .environment(rewardedAds)
                 .environment(gameCenter)
                 .environment(life)
+                .environment(cosmetics)
                 .onChange(of: scenePhase, initial: true) { _, phase in
                     guard phase == .active, !didStartServices else { return }
                     didStartServices = true

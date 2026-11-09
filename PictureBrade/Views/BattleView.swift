@@ -19,6 +19,8 @@ struct BattleView: View {
     @State private var drag: CGSize?
     /// この試合ですでにライフを減らしたか（二重に減らさないため）
     @State private var lifeCharged = false
+    /// この勝利で新しく手に入れた報酬（ストーリーの章ボスを初めて倒したとき）
+    @State private var earnedRewards: [Reward] = []
     /// ストーリーで勝利後「ストーリーを進める」を選んだときに呼ぶ（やめるを選んだときは呼ばない）
     var onAdvanceStory: () -> Void = {}
 
@@ -58,6 +60,9 @@ struct BattleView: View {
             ReviewPrompt.recordWin()
             switch game.mode {
             case .story:
+                if let enemy = EnemyCatalog.enemy(forBladeID: game.cpu.id), !enemies.isDefeated(enemy) {
+                    earnedRewards = Reward.rewards(for: enemy)
+                }
                 enemies.markDefeated(bladeID: game.cpu.id, stars: game.earnedStars)
             case .endless:
                 enemies.recordStreak(game.winStreak)
@@ -71,7 +76,7 @@ struct BattleView: View {
 
     private var topBar: some View {
         HStack(alignment: .top) {
-            spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan)
+            spinGauge(blade: game.player, image: game.playerImage, spin: game.playerSpin, score: game.playerScore, color: .cyan, skin: game.loadout.skin)
             VStack(spacing: 2) {
                 switch game.mode {
                 case .story:
@@ -96,9 +101,9 @@ struct BattleView: View {
         }
     }
 
-    private func spinGauge(blade: Blade, image: UIImage, spin: Float, score: Int, color: Color) -> some View {
+    private func spinGauge(blade: Blade, image: UIImage, spin: Float, score: Int, color: Color, skin: BladeSkin = .normal) -> some View {
         VStack(spacing: 4) {
-            BladeBadge(image: image, tint: blade.tint.color, size: 44)
+            BladeBadge(image: image, tint: blade.tint.color, size: 44, skin: skin)
             Text(blade.name)
                 .font(.caption.bold())
                 .lineLimit(1)
@@ -276,6 +281,9 @@ struct BattleView: View {
                         .foregroundStyle(.white.opacity(0.9))
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(earnedRewards) { reward in
+                    RewardGetBanner(reward: reward)
                 }
                 Button {
                     onAdvanceStory()
@@ -466,5 +474,39 @@ private struct AimArrow: View {
             .fill(Theme.gold)
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// 勝利パネルに出す「報酬ゲット！」
+private struct RewardGetBanner: View {
+    let reward: Reward
+    @State private var appeared = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RewardIcon(reward: reward, size: 26)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(.white.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("報酬ゲット！  \(reward.kindLabel)")
+                    .font(.caption.bold())
+                    .foregroundStyle(Theme.gold)
+                Text(reward.title)
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+                Text("ホームの「カスタム」で装備できる")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.gold.opacity(0.15)))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.gold, lineWidth: 2))
+        .scaleEffect(appeared ? 1 : 0.6)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(duration: 0.5, bounce: 0.5).delay(0.6)) { appeared = true }
+        }
     }
 }

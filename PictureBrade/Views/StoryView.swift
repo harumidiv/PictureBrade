@@ -11,6 +11,7 @@ struct StoryView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(LifeManager.self) private var life
+    @Environment(CosmeticStore.self) private var cosmetics
 
     let story: StoryKind
 
@@ -163,6 +164,17 @@ struct StoryView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
+                if !isDefeated, let reward = Reward.rewards(for: stage).first {
+                    // 章ボスを倒すともらえる報酬（中身は倒すまでのお楽しみ）
+                    VStack(spacing: 2) {
+                        Image(systemName: "gift.fill")
+                            .font(.title3)
+                            .foregroundStyle(Theme.gold)
+                        Text(reward.kindLabel)
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                }
                 if isDefeated {
                     StarRating(stars: enemies.stars(for: stage), size: 22)
                 } else {
@@ -196,7 +208,7 @@ struct StoryView: View {
                         Button {
                             playerBlade = blade
                         } label: {
-                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46)
+                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46, skin: cosmetics.validatedLoadout(enemies: enemies).skin)
                                 .overlay(Circle().stroke(Theme.gold, lineWidth: playerBlade?.id == blade.id ? 3 : 0).padding(-4))
                                 .padding(5)
                         }
@@ -277,7 +289,8 @@ struct StoryView: View {
         battle = BattleGame(
             player: playerBlade, playerImage: playerImage,
             cpu: enemies.blade(for: enemy), cpuImage: enemies.image(for: enemy),
-            cpuSkill: enemy.skill, mode: .story
+            cpuSkill: enemy.skill, mode: .story,
+            loadout: cosmetics.validatedLoadout(enemies: enemies)
         )
     }
 

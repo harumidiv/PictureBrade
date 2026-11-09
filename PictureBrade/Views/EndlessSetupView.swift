@@ -11,6 +11,7 @@ struct EndlessSetupView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(CosmeticStore.self) private var cosmetics
     @Environment(\.dismiss) private var dismiss
 
     @State private var playerBlade: Blade?
@@ -93,7 +94,8 @@ struct EndlessSetupView: View {
         battle = BattleGame(
             player: playerBlade, playerImage: playerImage,
             cpu: enemies.blade(for: opponent), cpuImage: enemies.image(for: opponent),
-            cpuSkill: opponent.skill, mode: .endless
+            cpuSkill: opponent.skill, mode: .endless,
+            loadout: cosmetics.validatedLoadout(enemies: enemies)
         )
     }
 }

@@ -3,6 +3,7 @@
 //  PictureBrade
 //
 
+import Metal
 import RealityKit
 import UIKit
 
@@ -143,7 +144,8 @@ enum SceneBuilder {
 
     // MARK: - Blade
 
-    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float) async -> BladeModel {
+    /// skin はストーリーの報酬で手に入る見た目の加工（自分のコマにだけ使う）
+    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float, skin: BladeSkin = .normal) async -> BladeModel {
         let root = Entity()
         let spinner = Entity()
         root.addChild(spinner)
@@ -176,12 +178,8 @@ enum SceneBuilder {
         // 切り抜き画像（これがコマの「顔」）
         if let cgImage = image.cgImage,
            let texture = try? await TextureResource(image: cgImage, options: .init(semantic: .color)) {
-            var imageMaterial = UnlitMaterial()
-            imageMaterial.color = .init(tint: .white, texture: .init(texture))
-            imageMaterial.opacityThreshold = 0.1
-            imageMaterial.faceCulling = .none
             let size = radius * 2.5
-            let face = ModelEntity(mesh: .generatePlane(width: size, height: size), materials: [imageMaterial])
+            let face = ModelEntity(mesh: .generatePlane(width: size, height: size), materials: [faceMaterial(texture: texture, skin: skin)])
             face.orientation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
             face.position.y = 0.024
             spinner.addChild(face)
@@ -189,6 +187,26 @@ enum SceneBuilder {
 
         return BladeModel(root: root, spinner: spinner, tipHeight: tipHeight)
     }
+
+    /// コマの顔の材質。見た目の加工があれば Metal のシェーダーで描き、使えない環境ではそのままの画像にする
+    private static func faceMaterial(texture: TextureResource, skin: BladeSkin) -> any RealityKit.Material {
+        if let shaderName = skin.shaderFunctionName, let library = shaderLibrary {
+            let shader = CustomMaterial.SurfaceShader(named: shaderName, in: library)
+            if var material = try? CustomMaterial(surfaceShader: shader, lightingModel: .lit) {
+                material.baseColor = .init(tint: .white, texture: .init(texture))
+                material.opacityThreshold = 0.1
+                material.faceCulling = .none
+                return material
+            }
+        }
+        var material = UnlitMaterial()
+        material.color = .init(tint: .white, texture: .init(texture))
+        material.opacityThreshold = 0.1
+        material.faceCulling = .none
+        return material
+    }
+
+    private static let shaderLibrary: MTLLibrary? = MTLCreateSystemDefaultDevice()?.makeDefaultLibrary()
 
     // MARK: - Effects
 
@@ -211,5 +229,66 @@ enum SceneBuilder {
 
     static func makeSparkStreak() -> ModelEntity {
         ModelEntity(mesh: sparkStreakMesh, materials: [sparkMaterials[0]])
+    }
+
+    // MARK: - Glyph effects
+
+    /// ハートやひらがななど、火花の代わりに飛び散る文字1つぶんの板（いつもカメラのほうを向けて使う）
+    static let glyphMesh = MeshResource.generatePlane(width: 0.1, height: 0.1)
+
+    /// エフェクトの文字を1つずつ画像にして材質にする（同じエフェクトは2回目から使い回す）
+    @MainActor
+    static func glyphMaterials(for effect: HitEffect) async -> [UnlitMaterial] {
+        if let cached = glyphMaterialCache[effect] { return cached }
+        let colors: [UIColor] = [.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple, .systemRed]
+        var materials: [UnlitMaterial] = []
+        for (index, glyph) in effect.glyphs.enumerated() {
+            let color: UIColor = effect == .kanji ? [.systemRed, .systemOrange, .systemYellow][index % 3] : colors[index % colors.count]
+            guard let cgImage = renderGlyph(glyph, color: effect.isTextGlyph ? color : nil).cgImage,
+                  let texture = try? await TextureResource(image: cgImage, options: .init(semantic: .color)) else { continue }
+            var material = UnlitMaterial()
+            material.color = .init(tint: .white, texture: .init(texture))
+            material.blending = .transparent(opacity: .init(floatLiteral: 1))
+            material.faceCulling = .none
+            materials.append(material)
+        }
+        glyphMaterialCache[effect] = materials
+        return materials
+    }
+
+    @MainActor private static var glyphMaterialCache: [HitEffect: [UnlitMaterial]] = [:]
+
+    /// color が nil なら絵文字としてそのまま描く。文字は白いふちを付けて太く描く
+    static func renderGlyph(_ glyph: String, color: UIColor?) -> UIImage {
+        let side: CGFloat = 128
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
+            var attributes: [NSAttributedString.Key: Any]
+            if let color {
+                let base = UIFont.systemFont(ofSize: 92, weight: .black)
+                let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 92) } ?? base
+                attributes = [.font: font, .foregroundColor: color, .strokeColor: UIColor.white, .strokeWidth: -5.0]
+            } else {
+                attributes = [.font: UIFont.systemFont(ofSize: 96)]
+            }
+            let string = NSAttributedString(string: glyph, attributes: attributes)
+            let bounds = string.boundingRect(with: CGSize(width: side * 2, height: side * 2), options: [.usesLineFragmentOrigin], context: nil)
+            string.draw(at: CGPoint(x: (side - bounds.width) / 2, y: (side - bounds.height) / 2))
+        }
+    }
+}
+
+extension BladeSkin {
+    /// BladeSkinShaders.metal の関数名
+    var shaderFunctionName: String? {
+        switch self {
+        case .normal: nil
+        case .gold: "bladeSkinGold"
+        case .neon: "bladeSkinNeon"
+        case .rainbow: "bladeSkinRainbow"
+        case .pixel: "bladeSkinPixel"
+        case .hologram: "bladeSkinHologram"
+        }
     }
 }

@@ -21,6 +21,8 @@ struct BladeBadge: View {
     let tint: Color
     var size: CGFloat = 96
     var spinning = false
+    /// ストーリーの報酬で手に入る見た目の加工
+    var skin: BladeSkin = .normal
 
     @State private var angle: Double = 0
 
@@ -34,6 +36,7 @@ struct BladeBadge: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
+                    .bladeSkin(skin)
                     .padding(size * 0.08)
                     .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
             }
@@ -190,5 +193,45 @@ struct PlayerBladePicker: View {
         .onAppear {
             selection = selection ?? store.allBlades.first
         }
+    }
+}
+
+// MARK: - 見た目の加工
+
+extension View {
+    /// SkinPreviewShaders.metal のシェーダーで、バトル中と同じ見た目の加工をかける
+    @ViewBuilder
+    func bladeSkin(_ skin: BladeSkin) -> some View {
+        if skin == .normal {
+            self
+        } else {
+            modifier(BladeSkinModifier(skin: skin))
+        }
+    }
+}
+
+private struct BladeSkinModifier: ViewModifier {
+    let skin: BladeSkin
+    @State private var start = Date.now
+    @State private var size = CGSize(width: 1, height: 1)
+
+    func body(content: Content) -> some View {
+        TimelineView(.animation) { timeline in
+            let time = Float(timeline.date.timeIntervalSince(start))
+            content
+                .layerEffect(shader(size: size, time: time), maxSampleOffset: CGSize(width: 8, height: 8))
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+    }
+
+    private func shader(size: CGSize, time: Float) -> Shader {
+        let name = switch skin {
+        case .normal, .gold: "previewSkinGold"
+        case .neon: "previewSkinNeon"
+        case .rainbow: "previewSkinRainbow"
+        case .pixel: "previewSkinPixel"
+        case .hologram: "previewSkinHologram"
+        }
+        return Shader(function: ShaderFunction(library: .default, name: name), arguments: [.float2(size), .float(time)])
     }
 }

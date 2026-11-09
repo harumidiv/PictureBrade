@@ -445,10 +445,11 @@ final class PartsStore {
         PartCatalog.parts(kind).count { isOwned($0) }
     }
 
-    /// count 回引く（10連は SR 以上が1つ確定）。ポイントが足りなければ nil
-    func draw(_ kind: PartKind, count: Int) -> [GachaResult]? {
+    /// count 回引く（10連は SR 以上が1つ確定）。ポイントが足りなければ nil。
+    /// free なら（広告を見たときなど）ポイントを使わない
+    func draw(_ kind: PartKind, count: Int, free: Bool = false) -> [GachaResult]? {
         let cost = count >= 10 ? Self.tenCost : Self.singleCost * count
-        guard spend(cost) else { return nil }
+        guard free || spend(cost) else { return nil }
         var parts = (0..<count).map { _ in Self.randomPart(kind, minimum: .normal) }
         if count >= 10, !parts.contains(where: { $0.rarity >= .superRare }) {
             parts[parts.count - 1] = Self.randomPart(kind, minimum: .superRare)

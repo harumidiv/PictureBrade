@@ -9,6 +9,7 @@ import UIKit
 /// バトルでためたポイントでボディ・シャフトのガチャを引く画面（装備はマイコマでコマをタップして行う）
 struct GachaView: View {
     @Environment(PartsStore.self) private var parts
+    @Environment(RewardedAds.self) private var rewardedAds
     @Environment(\.dismiss) private var dismiss
 
     @State private var results: [GachaResult]?
@@ -48,6 +49,7 @@ struct GachaView: View {
         .onAppear {
             // 最初のガチャの音が遅れないよう、先に音の準備をしておく
             ImpactSound.shared.prepare()
+            rewardedAds.gacha.load()
         }
     }
 
@@ -97,6 +99,7 @@ struct GachaView: View {
                 drawButton(kind, count: 1, cost: PartsStore.singleCost, title: "1回")
                 drawButton(kind, count: 10, cost: PartsStore.tenCost, title: "10連（SR以上1つ確定）")
             }
+            adDrawButton(kind)
         }
         .padding(16)
         .background(
@@ -132,6 +135,34 @@ struct GachaView: View {
         .buttonStyle(.borderedProminent)
         .tint(count >= 10 ? Theme.accent : Color(red: 0.35, green: 0.3, blue: 0.6))
         .disabled(parts.points < cost)
+    }
+
+    /// 広告を最後まで見たら、ポイントを使わずに1回引ける
+    private func adDrawButton(_ kind: PartKind) -> some View {
+        let ad = rewardedAds.gacha
+        return Button {
+            ad.show { earned in
+                guard earned, let drawn = parts.draw(kind, count: 1, free: true) else { return }
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                withAnimation { results = drawn }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if ad.isReady {
+                    Image(systemName: "play.rectangle.fill")
+                } else {
+                    ProgressView().tint(.black)
+                }
+                Text(ad.isReady ? "広告を見て1回無料" : "広告を準備中…")
+                    .font(.subheadline.bold())
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 2)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Theme.gold)
+        .foregroundStyle(.black)
+        .disabled(!ad.isReady)
     }
 
     private var rateTable: some View {

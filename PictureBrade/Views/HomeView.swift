@@ -12,9 +12,12 @@ struct HomeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
     @Environment(\.requestReview) private var requestReview
     @State private var isAddingBlade = false
     @State private var isShowingCollection = false
+    @State private var isShowingGacha = false
     @State private var battleMode: BattleGame.Mode?
     /// ホームに飾る自分のコマ（タップで入れ替わる）
     @AppStorage("homeBladeID") private var homeBladeID = ""
@@ -45,6 +48,9 @@ struct HomeView: View {
             .sheet(isPresented: $isShowingCollection) {
                 BladeCollectionView()
             }
+            .sheet(isPresented: $isShowingGacha) {
+                GachaView()
+            }
             .fullScreenCover(item: $battleMode, onDismiss: requestReviewIfNeeded) { mode in
                 switch mode {
                 case .story: StorySelectView()
@@ -60,10 +66,21 @@ struct HomeView: View {
 
     private var content: some View {
         VStack(spacing: 0) {
+            // ガチャに使えるポイント（タップでガチャ画面へ）
+            HStack {
+                Spacer()
+                Button {
+                    isShowingGacha = true
+                } label: {
+                    PointsLabel(points: parts.points)
+                }
+                .buttonStyle(.plain)
+            }
             HomeLogo()
-                .padding(.top, 12)
+                .padding(.top, 4)
             Spacer(minLength: 8)
-            HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
+            HomeHero(blade: heroBlade, image: heroBlade.flatMap(store.image(for:)), aura: heroBlade.map(enemies.aura(for:)) ?? .none,
+                     onTapBlade: cycleHeroBlade, onCreate: { isAddingBlade = true })
             Spacer(minLength: 8)
             modeButtons
             dock
@@ -99,8 +116,8 @@ struct HomeView: View {
                 battleMode = .story
             } label: {
                 ModeButtonLabel(
-                    title: "ストーリー",
-                    caption: enemies.isEveryStoryCleared ? "全クリア！" : "撃破 \(enemies.storyDefeatedCount)/\(EnemyCatalog.allStoryEnemies.count)",
+                    title: String(localized: "ストーリー"),
+                    caption: enemies.isEveryStoryCleared ? String(localized: "全クリア！") : String(localized: "撃破 \(enemies.storyDefeatedCount)/\(EnemyCatalog.allStoryEnemies.count)"),
                     systemImage: "map.fill"
                 ) {
                     EmptyView()
@@ -111,7 +128,7 @@ struct HomeView: View {
             Button {
                 battleMode = .endless
             } label: {
-                ModeButtonLabel(title: "ランダム連戦", caption: "最高 \(enemies.bestStreak)連勝", systemImage: "bolt.fill") {
+                ModeButtonLabel(title: String(localized: "ランダム連戦"), caption: String(localized: "最高 \(enemies.bestStreak)連勝"), systemImage: "bolt.fill") {
                     EmptyView()
                 }
             }
@@ -125,13 +142,20 @@ struct HomeView: View {
 
     private var dock: some View {
         HStack(spacing: 14) {
-            DockButton(title: "コマを作る", systemImage: "camera.fill", color: Theme.gold, isHighlighted: !hasBlades) {
+            DockButton(title: String(localized: "コマを作る"), systemImage: "camera.fill", color: Theme.gold, isHighlighted: !hasBlades) {
                 isAddingBlade = true
             }
-            DockButton(title: "マイコマ", systemImage: "square.grid.2x2.fill", color: .cyan, badge: store.blades.count) {
+            // ストーリーで新しい報酬を手に入れたら、マイコマで装備できるので光らせる
+            DockButton(
+                title: String(localized: "マイコマ"), systemImage: "square.grid.2x2.fill", color: .cyan, badge: store.blades.count,
+                isHighlighted: !cosmetics.newRewards(enemies: enemies).isEmpty
+            ) {
                 isShowingCollection = true
             }
-            DockButton(title: "ランキング", systemImage: "trophy.fill", color: .orange) {
+            DockButton(title: String(localized: "ガチャ"), systemImage: "gift.fill", color: .green, isHighlighted: parts.points >= PartsStore.singleCost) {
+                isShowingGacha = true
+            }
+            DockButton(title: String(localized: "ランキング"), systemImage: "trophy.fill", color: .orange) {
                 gameCenter.showEndlessLeaderboard()
             }
             .disabled(!gameCenter.isAuthenticated)
@@ -185,7 +209,7 @@ private struct HomeBackground: View {
                         let x = size.width * (0.08 + 0.84 * Double((index * 37) % 10) / 9)
                         let y = size.height * (1.1 - 1.2 * progress)
                         Text(character)
-                            .font(.system(size: 26 + CGFloat(index % 4) * 8, weight: .black, design: .rounded))
+                            .font(.glyph(size: 26 + CGFloat(index % 4) * 8))
                             .foregroundStyle(color.opacity(0.18))
                             .rotationEffect(.degrees(time * 40 * (index.isMultiple(of: 2) ? 1 : -1)))
                             .position(x: x + 14 * sin(time + Double(index)), y: y)
@@ -255,6 +279,7 @@ private struct HomeLogo: View {
 private struct HomeHero: View {
     let blade: Blade?
     let image: UIImage?
+    var aura: AuraTier = .none
     let onTapBlade: () -> Void
     let onCreate: () -> Void
 
@@ -321,7 +346,7 @@ private struct HomeHero: View {
                 }
             } label: {
                 VStack(spacing: 6) {
-                    BladeBadge(image: image, tint: blade.tint.color, size: 140, spinning: true)
+                    BladeBadge(image: image, tint: blade.tint.color, size: 140, spinning: true, aura: aura)
                         .id(blade.id)
                         .shadow(color: blade.tint.color.opacity(0.8), radius: 16)
                         .scaleEffect(tapBoost ? 1.15 : 1)
@@ -343,7 +368,7 @@ private struct HomeHero: View {
                     }
                     .frame(width: 140, height: 140)
                     .scaleEffect(bounce ? 1.05 : 0.97)
-                    NameTag(text: "コマを作ろう！", color: Theme.gold)
+                    NameTag(text: String(localized: "コマを作ろう！"), color: Theme.gold)
                 }
             }
             .buttonStyle(.plain)
@@ -358,13 +383,13 @@ private struct HomeHero: View {
                 Circle()
                     .strokeBorder(LinearGradient(colors: [.white, .gray, .white], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 5)
                 Text(rival.character)
-                    .font(.system(size: 58, weight: .black, design: .rounded))
+                    .font(.glyph(size: 58))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.6), radius: 0, x: 2, y: 2)
             }
             .frame(width: 110, height: 110)
             .shadow(color: rival.color.opacity(0.7), radius: 14)
-            NameTag(text: "ライバル", color: Theme.accent)
+            NameTag(text: String(localized: "ライバル"), color: Theme.accent)
         }
         .scaleEffect(rivalVisible ? 1 : 0.2)
         .opacity(rivalVisible ? 1 : 0)
@@ -517,11 +542,15 @@ private struct DockButton: View {
 /// 自分のコマの一覧（削除もここから）
 private struct BladeCollectionView: View {
     @Environment(BladeStore.self) private var store
+    @Environment(EnemyCatalog.self) private var enemies
+    @Environment(PartsStore.self) private var parts
     @Environment(\.dismiss) private var dismiss
     @State private var isAddingBlade = false
     @State private var bladeToDelete: Blade?
     /// 削除ボタンを出しているか
     @State private var isEditing = false
+    /// タップして装備画面を開いたコマ
+    @State private var equippingBlade: Blade?
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
@@ -550,7 +579,14 @@ private struct BladeCollectionView: View {
                     }
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(store.blades) { blade in
-                            BladeCard(blade: blade, image: store.image(for: blade))
+                            BladeCard(blade: blade, image: store.image(for: blade), bestStreak: enemies.bestStreak(for: blade),
+                                      stats: parts.equipped(blade).stats)
+                                .contentShape(Rectangle())
+                                // 編集中（削除ボタンを出しているとき）は装備画面を開かない
+                                .onTapGesture {
+                                    guard !isEditing else { return }
+                                    equippingBlade = blade
+                                }
                                 .overlay(alignment: .topTrailing) {
                                     if isEditing {
                                         Button {
@@ -562,7 +598,7 @@ private struct BladeCollectionView: View {
                                                 .foregroundStyle(.white, .red)
                                                 .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
                                         }
-                                        .accessibilityLabel("「\(blade.name)」を削除")
+                                        .accessibilityLabel(String(localized: "「\(blade.name)」を削除"))
                                         .offset(x: 8, y: -8)
                                         .transition(.scale.combined(with: .opacity))
                                     }
@@ -575,12 +611,12 @@ private struct BladeCollectionView: View {
                         }
                     }
                     if !store.blades.isEmpty {
-                        Text(isEditing ? "ゴミ箱ボタンで削除できます" : "右上の「編集」か、コマの長押しで削除できます")
+                        Text(isEditing ? String(localized: "ゴミ箱ボタンで削除できます") : String(localized: "コマをタップすると装備を変えられます。右上の「編集」か、コマの長押しで削除できます"))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.6))
                     }
                     if !store.starterBlades.isEmpty {
-                        NavigationLink("ファイターを見る（\(store.starterBlades.count)）") {
+                        NavigationLink(String(localized: "ファイターを見る（\(store.starterBlades.count)）")) {
                             FighterListView()
                         }
                         .tint(Theme.gold)
@@ -589,6 +625,9 @@ private struct BladeCollectionView: View {
                 .padding()
             }
             .background(Theme.background.ignoresSafeArea())
+            .navigationDestination(item: $equippingBlade) { blade in
+                BladeEquipView(blade: blade)
+            }
             .navigationTitle("マイコマ（\(store.blades.count)）")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -601,7 +640,7 @@ private struct BladeCollectionView: View {
                 }
                 if !store.blades.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button(isEditing ? "完了" : "編集") {
+                        Button(isEditing ? String(localized: "完了") : String(localized: "編集")) {
                             withAnimation(.spring(duration: 0.3)) { isEditing.toggle() }
                         }
                         .fontWeight(isEditing ? .bold : .regular)
@@ -612,7 +651,7 @@ private struct BladeCollectionView: View {
                 AddBladeView()
             }
             .alert(
-                "「\(bladeToDelete?.name ?? "")」を削除しますか？",
+                String(localized: "「\(bladeToDelete?.name ?? "")」を削除しますか？"),
                 isPresented: Binding(get: { bladeToDelete != nil }, set: { if !$0 { bladeToDelete = nil } })
             ) {
                 Button("キャンセル", role: .cancel) {}

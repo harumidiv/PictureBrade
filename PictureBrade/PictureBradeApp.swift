@@ -14,6 +14,8 @@ struct PictureBradeApp: App {
     @State private var rewardedAds = RewardedAds()
     @State private var gameCenter = GameCenterManager()
     @State private var life = LifeManager()
+    @State private var cosmetics = CosmeticStore()
+    @State private var parts = PartsStore()
     @State private var didStartServices = false
     @Environment(\.scenePhase) private var scenePhase
 
@@ -25,6 +27,8 @@ struct PictureBradeApp: App {
                 .environment(rewardedAds)
                 .environment(gameCenter)
                 .environment(life)
+                .environment(cosmetics)
+                .environment(parts)
                 .onChange(of: scenePhase, initial: true) { _, phase in
                     guard phase == .active, !didStartServices else { return }
                     didStartServices = true
@@ -32,7 +36,9 @@ struct PictureBradeApp: App {
                         // 広告の読み込みより先に ATT の選択を済ませ、Game Center のログイン画面とも重ならないようにする
                         await TrackingAuthorization.requestIfNeeded()
                         rewardedAds.start()
-                        gameCenter.authenticate(bestStreak: enemies.bestStreak)
+                        gameCenter.authenticate(bestStreak: enemies.bestStreak) {
+                            StoryKind.allCases.filter(enemies.isStoryCleared)
+                        }
                     }
                 }
                 .preferredColorScheme(.dark)

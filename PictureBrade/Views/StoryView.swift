@@ -11,6 +11,8 @@ struct StoryView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(LifeManager.self) private var life
+    @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
 
     let story: StoryKind
 
@@ -142,8 +144,8 @@ struct StoryView: View {
     }
 
     private var departureTitle: String {
-        guard let selectedStage else { return "エンディングを見る" }
-        return enemies.isDefeated(selectedStage) ? "もう一度戦う" : "いざ出陣！！"
+        guard let selectedStage else { return String(localized: "エンディングを見る") }
+        return enemies.isDefeated(selectedStage) ? String(localized: "もう一度戦う") : String(localized: "いざ出陣！！")
     }
 
     @ViewBuilder
@@ -163,6 +165,17 @@ struct StoryView: View {
                         .foregroundStyle(.white)
                 }
                 Spacer()
+                if !isDefeated, let reward = Reward.rewards(for: stage).first {
+                    // 章ボスを倒すともらえる報酬（中身は倒すまでのお楽しみ）
+                    VStack(spacing: 2) {
+                        Image(systemName: "gift.fill")
+                            .font(.title3)
+                            .foregroundStyle(Theme.gold)
+                        Text(reward.kindLabel)
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                }
                 if isDefeated {
                     StarRating(stars: enemies.stars(for: stage), size: 22)
                 } else {
@@ -196,7 +209,8 @@ struct StoryView: View {
                         Button {
                             playerBlade = blade
                         } label: {
-                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46)
+                            BladeBadge(image: store.image(for: blade), tint: blade.tint.color, size: 46, skin: cosmetics.validatedLoadout(for: blade, enemies: enemies).skin,
+                                       aura: enemies.aura(for: blade))
                                 .overlay(Circle().stroke(Theme.gold, lineWidth: playerBlade?.id == blade.id ? 3 : 0).padding(-4))
                                 .padding(5)
                         }
@@ -222,12 +236,12 @@ struct StoryView: View {
         ]
         let lines = story.prologue.enumerated().map { index, text in
             DialogueLine(
-                heading: index == 0 ? "プロローグ" : nil,
+                heading: index == 0 ? String(localized: "プロローグ") : nil,
                 text: text,
                 illustration: illustrations.indices.contains(index) ? illustrations[index] : nil
             )
         }
-        return StoryDialogue(lines: lines, finishTitle: "はじめる")
+        return StoryDialogue(lines: lines, finishTitle: String(localized: "はじめる"))
     }
 
     private var endingDialogue: StoryDialogue {
@@ -235,7 +249,7 @@ struct StoryView: View {
         let lines = story.ending.map { text in
             DialogueLine(text: text, illustration: .returnToDictionary(story))
         }
-        return StoryDialogue(lines: lines, finishTitle: "おわり")
+        return StoryDialogue(lines: lines, finishTitle: String(localized: "おわり"))
     }
 
     /// 相手の登場シーン → バトル
@@ -244,19 +258,19 @@ struct StoryView: View {
         var lines: [DialogueLine] = []
         let isRematch = enemies.isDefeated(enemy)
         if let chapter = story.chapter(for: enemy), chapter.enemies.first == enemy, !isRematch {
-            lines.append(DialogueLine(heading: "第\(chapter.number)章\n\(chapter.title)", text: chapter.intro))
+            lines.append(DialogueLine(heading: String(localized: "第\(chapter.number)章\n\(chapter.title)"), text: chapter.intro))
         }
         if !isRematch {
             if story.isBoss(enemy) {
                 // ボス（王冠の相手）は、黒いシルエットがズシンズシンと近づいてから正体を見せる
                 lines.append(DialogueLine(
-                    text: "……何者かが近づいてくる。",
+                    text: String(localized: "……何者かが近づいてくる。"),
                     portrait: enemies.image(for: enemy),
                     portraitTint: blade.tint.color,
                     silhouette: true
                 ))
             } else {
-                lines.append(DialogueLine(text: "……何者かが近づいてくる。"))
+                lines.append(DialogueLine(text: String(localized: "……何者かが近づいてくる。")))
             }
         }
         lines.append(DialogueLine(
@@ -265,7 +279,7 @@ struct StoryView: View {
             portrait: enemies.image(for: enemy),
             portraitTint: blade.tint.color
         ))
-        dialogue = StoryDialogue(lines: lines, finishTitle: "バトル開始！", battleEnemy: enemy, cancelTitle: "逃げる")
+        dialogue = StoryDialogue(lines: lines, finishTitle: String(localized: "バトル開始！"), battleEnemy: enemy, cancelTitle: String(localized: "逃げる"))
     }
 
     private func startPendingBattle() {
@@ -275,9 +289,12 @@ struct StoryView: View {
         defeatedCountBeforeBattle = enemies.defeated.count
         advanceStoryAfterBattle = false
         battle = BattleGame(
-            player: playerBlade, playerImage: playerImage,
+            player: parts.equipped(playerBlade), playerImage: playerImage,
             cpu: enemies.blade(for: enemy), cpuImage: enemies.image(for: enemy),
-            cpuSkill: enemy.skill, mode: .story
+            cpuSkill: enemy.skill, mode: .story,
+            loadout: cosmetics.validatedLoadout(for: playerBlade, enemies: enemies),
+            playerAura: enemies.aura(for: playerBlade),
+            playerEquipment: parts.equipment(for: playerBlade)
         )
     }
 

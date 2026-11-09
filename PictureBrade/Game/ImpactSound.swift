@@ -5,7 +5,7 @@
 
 import AVFoundation
 
-/// ぶつかったときの金属音。音声ファイルは使わず、毎回その場で合成して鳴らす
+/// ぶつかったときの音。音声ファイルは使わず、毎回その場で合成して鳴らす
 final class ImpactSound {
     static let shared = ImpactSound()
 
@@ -16,12 +16,21 @@ final class ImpactSound {
     private var lastPlayTime: TimeInterval = 0
     private var isConfigured = false
 
+    private enum SessionState {
+        case inactive
+        case activating
+        case active
+    }
+
+    private var sessionState = SessionState.inactive
+
     private init() {
         format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     }
 
     /// strength はぶつかる速さ（だいたい 0.4〜4）。強いほど大きく、長く、ギラついた音になる
-    func play(strength: Float, isWall: Bool) {
+    /// style はストーリーの報酬で選べる音の種類
+    func play(strength: Float, isWall: Bool, style: HitSound = .metal) {
         // 同時にたくさん鳴ると濁るので、短い間隔の連続ヒットは間引く
         let now = ProcessInfo.processInfo.systemUptime
         guard now - lastPlayTime > 0.04 else { return }
@@ -29,18 +38,64 @@ final class ImpactSound {
 
         guard startIfNeeded() else { return }
         let intensity = min(max((strength - 0.3) / 2.7, 0), 1)
-        guard let buffer = Self.synthesize(intensity: intensity, isWall: isWall, format: format) else { return }
+        let buffer: AVAudioPCMBuffer? = switch style {
+        case .metal: Self.synthesize(intensity: intensity, isWall: isWall, format: format)
+        case .taiko: Self.synthesizeTaiko(intensity: intensity, isWall: isWall, format: format)
+        case .bell: Self.synthesizeBell(intensity: intensity, isWall: isWall, format: format)
+        case .pop: Self.synthesizePop(intensity: intensity, isWall: isWall, format: format)
+        case .boing: Self.synthesizeBoing(intensity: intensity, isWall: isWall, format: format)
+        case .chiptune: Self.synthesizeChiptune(intensity: intensity, isWall: isWall, format: format)
+        }
+        guard let buffer else { return }
         let player = players[nextPlayer]
         nextPlayer = (nextPlayer + 1) % players.count
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
         if !player.isPlaying { player.play() }
     }
 
-    private func startIfNeeded() -> Bool {
-        if !isConfigured {
+    /// 衝突以外の効果音（ガチャなど）を鳴らす。間引かずにそのまま鳴らす
+    func play(_ make: (AVAudioFormat) -> AVAudioPCMBuffer?) {
+        guard startIfNeeded(), let buffer = make(format) else { return }
+        let player = players[nextPlayer]
+        nextPlayer = (nextPlayer + 1) % players.count
+        player.scheduleBuffer(buffer, at: nil, options: .interrupts)
+        if !player.isPlaying { player.play() }
+    }
+
+    /// オーディオセッションを先に有効にしておく（バトルの準備中などに呼ぶ）。
+    /// 有効にする処理はメインスレッドを止めることがあるので、裏で行う
+    func prepare() {
+        guard sessionState == .inactive else { return }
+        sessionState = .activating
+        if #available(iOS 27.0, *) {
+            let session = AVAudioSession.sharedInstance()
             // マナーモード（消音スイッチ）中でも鳴らす。ほかのアプリの音楽は止めずに混ぜて鳴らす
-            try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
-            try? AVAudioSession.sharedInstance().setActive(true)
+            try? session.setCategory(.playback, options: [.mixWithOthers])
+            session.activate(options: []) { activated, _ in
+                Task { @MainActor in ImpactSound.shared.sessionDidActivate(activated) }
+            }
+        } else {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let session = AVAudioSession.sharedInstance()
+                try? session.setCategory(.playback, options: [.mixWithOthers])
+                let activated = (try? session.setActive(true)) != nil
+                Task { @MainActor in ImpactSound.shared.sessionDidActivate(activated) }
+            }
+        }
+    }
+
+    private func sessionDidActivate(_ activated: Bool) {
+        // 失敗したら次に鳴らすときにもう一度試す
+        sessionState = activated ? .active : .inactive
+        if activated { _ = startIfNeeded() }
+    }
+
+    private func startIfNeeded() -> Bool {
+        guard sessionState == .active else {
+            prepare()
+            return false
+        }
+        if !isConfigured {
             for _ in 0..<6 {
                 let player = AVAudioPlayerNode()
                 engine.attach(player)
@@ -151,6 +206,122 @@ final class ImpactSound {
         return buffer
     }
 }
+
+// MARK: - 報酬の音
+
+extension ImpactSound {
+    /// duration 秒ぶんの空のバッファを作り、render で1サンプルずつ埋める（time は秒）。
+    /// 最後は短くフェードアウトさせて、プツッと切れないようにする
+    static func render(
+        duration: Float, format: AVAudioFormat, _ sample: (_ time: Float, _ sampleRate: Float) -> Float
+    ) -> AVAudioPCMBuffer? {
+        let sampleRate = Float(format.sampleRate)
+        let frameCount = AVAudioFrameCount(duration * sampleRate)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount),
+              let samples = buffer.floatChannelData?[0] else { return nil }
+        buffer.frameLength = frameCount
+        let releaseFrames = sampleRate * 0.015
+        for frame in 0..<Int(frameCount) {
+            let release = min(1, (Float(frameCount) - Float(frame)) / releaseFrames)
+            samples[frame] = sample(Float(frame) / sampleRate, sampleRate) * release
+        }
+        return buffer
+    }
+
+    /// 太鼓：低く沈む「ドン」に、皮を叩く「パン」を重ねる
+    fileprivate static func synthesizeTaiko(intensity: Float, isWall: Bool, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let base = (isWall ? 130 : 95 - 25 * intensity) * Float.random(in: 0.95...1.05)
+        let duration: Float = 0.25 + 0.35 * intensity
+        let decay: Float = 1 / (0.09 + 0.2 * intensity)
+        let loudness: Float = 0.45 + 0.45 * intensity
+        var phase: Float = 0
+        var skin = BandPass(center: isWall ? 900 : 600, q: 1.2, sampleRate: Float(format.sampleRate))
+        return render(duration: duration, format: format) { time, sampleRate in
+            // 叩いた直後は少し高く、すぐ下がる
+            let frequency = base * (1 + 0.6 * exp(-time * 40))
+            phase += 2 * .pi * frequency / sampleRate
+            let body = sin(phase) * exp(-time * decay)
+            let slap = skin.process(Float.random(in: -1...1)) * exp(-time * 70) * (isWall ? 2.5 : 1.6)
+            return tanh((body + slap) * 1.8) * loudness
+        }
+    }
+
+    /// 鈴：かん高い金属の倍音が「チリーン」と長めに響く
+    fileprivate static func synthesizeBell(intensity: Float, isWall: Bool, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let base = (isWall ? 1500 : 2100 - 500 * intensity) * Float.random(in: 0.94...1.06)
+        let partials: [(ratio: Float, gain: Float, decay: Float)] = [
+            (1, 1, 3.5), (2.76, 0.5, 6), (5.4, 0.3, 10), (8.93, 0.15, 16),
+        ]
+        let duration: Float = 0.4 + 0.5 * intensity
+        let loudness: Float = 0.22 + 0.25 * intensity
+        // 2つ並べて少しずらし、鈴らしく揺らす
+        let detune: Float = 1.004
+        return render(duration: duration, format: format) { time, _ in
+            var value: Float = 0
+            for partial in partials {
+                let frequency = base * partial.ratio
+                let ring = sin(2 * .pi * frequency * time) + sin(2 * .pi * frequency * detune * time)
+                value += ring * 0.5 * partial.gain * exp(-time * partial.decay)
+            }
+            let attack = min(1, time / 0.002)
+            return value / 1.95 * loudness * attack
+        }
+    }
+
+    /// ポップ：音程が上がる短い「ポンッ」（泡がはじけるような音）
+    fileprivate static func synthesizePop(intensity: Float, isWall: Bool, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let start = (isWall ? 300 : 420) * Float.random(in: 0.85...1.2)
+        let end = start * (2.2 + intensity)
+        let duration: Float = 0.09 + 0.07 * intensity
+        let loudness: Float = 0.45 + 0.35 * intensity
+        var phase: Float = 0
+        return render(duration: duration, format: format) { time, sampleRate in
+            let progress = min(1, time / 0.035)
+            phase += 2 * .pi * (start + (end - start) * progress) / sampleRate
+            let envelope = min(1, time / 0.002) * exp(-time * 38)
+            return sin(phase) * envelope * loudness
+        }
+    }
+
+    /// びよーん：バネのように音程がゆれながら下がっていく
+    fileprivate static func synthesizeBoing(intensity: Float, isWall: Bool, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let base = (isWall ? 260 : 190) * Float.random(in: 0.9...1.1)
+        let duration: Float = 0.3 + 0.3 * intensity
+        let loudness: Float = 0.35 + 0.35 * intensity
+        let wobbleRate: Float = 14 + 6 * intensity
+        var phase: Float = 0
+        return render(duration: duration, format: format) { time, sampleRate in
+            let wobble = 1 + 0.45 * exp(-time * 6) * sin(2 * .pi * wobbleRate * time)
+            let frequency = base * wobble * (1 + 0.8 * exp(-time * 25))
+            phase += 2 * .pi * frequency / sampleRate
+            // 少しだけ倍音を足して、ゴムっぽい音にする
+            let tone = sin(phase) + 0.3 * sin(2 * phase)
+            let envelope = min(1, time / 0.003) * exp(-time * (5 - 2 * intensity))
+            return tone / 1.3 * envelope * loudness
+        }
+    }
+
+    /// ピコピコ：レトロゲーム風の矩形波で、2音を素早く鳴らす
+    fileprivate static func synthesizeChiptune(intensity: Float, isWall: Bool, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        // 半音単位でずらして、毎回ちがうメロディーに聞こえるようにする
+        let semitone = Float(Int.random(in: -2...2))
+        let first = (isWall ? 523 : 784) * pow(2, semitone / 12)
+        let second = first * (intensity > 0.5 ? 2 : 1.5)
+        let step: Float = 0.045
+        let duration: Float = step * 2 + 0.03 + 0.08 * intensity
+        let loudness: Float = 0.16 + 0.14 * intensity
+        var phase: Float = 0
+        return render(duration: duration, format: format) { time, sampleRate in
+            let frequency = time < step ? first : second
+            phase += frequency / sampleRate
+            let square: Float = fract(phase) < 0.5 ? 1 : -1
+            let envelope = time < step * 2 ? 1 : exp(-(time - step * 2) * 30)
+            return square * envelope * loudness
+        }
+    }
+}
+
+private func fract(_ value: Float) -> Float { value - floor(value) }
 
 /// 帯域通過フィルター（指定した高さのあたりだけを通す）
 private struct BandPass {

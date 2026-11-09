@@ -87,13 +87,13 @@ struct AddBladeView: View {
                 .fill(.white.opacity(0.06))
                 .strokeBorder(.white.opacity(0.2), style: StrokeStyle(lineWidth: 2, dash: [8]))
             if isProcessing {
-                ProgressView("切り抜き中…")
+                ProgressView(String(localized: "切り抜き中…"))
                     .tint(.white)
                     .foregroundStyle(.white)
             } else if let preview, let analysis {
                 VStack(spacing: 12) {
                     BladeBadge(image: preview, tint: analysis.tint.color, size: 160, spinning: true)
-                    Text(analysis.stats.typeName + "タイプ")
+                    Text(analysis.stats.typeName + String(localized: "タイプ"))
                         .font(.headline)
                         .foregroundStyle(Theme.gold)
                     StatsView(stats: analysis.stats)
@@ -187,7 +187,7 @@ struct AddBladeView: View {
     private func process(_ image: UIImage?, credit newCredit: PhotoCredit? = nil) async {
         credit = newCredit
         guard let image else {
-            errorMessage = "画像が見つかりませんでした"
+            errorMessage = String(localized: "画像が見つかりませんでした")
             return
         }
         isProcessing = true
@@ -198,7 +198,7 @@ struct AddBladeView: View {
             preview = prepared.image
             isRoughCut = prepared.isRoughCut
         } catch {
-            errorMessage = "画像を処理できませんでした"
+            errorMessage = String(localized: "画像を処理できませんでした")
         }
     }
 }

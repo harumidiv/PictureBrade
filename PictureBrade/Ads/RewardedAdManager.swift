@@ -12,11 +12,14 @@ enum AdConfig {
     #if DEBUG
     static let continueRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
     static let lifeRefillRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
+    static let gachaRewardedUnitID = "ca-app-pub-3940256099942544/1712485313"
     #else
     /// ランダム連戦のコンティニュー
     static let continueRewardedUnitID = "ca-app-pub-8522231452310619/1172650202"
     /// ストーリーのライフ復活
     static let lifeRefillRewardedUnitID = "ca-app-pub-8522231452310619/7770275775"
+    /// ガチャを1回無料で回す
+    static let gachaRewardedUnitID = "ca-app-pub-8522231452310619/6287095680"
     #endif
 }
 
@@ -27,11 +30,14 @@ final class RewardedAds {
     let continuation = RewardedAdManager(unitID: AdConfig.continueRewardedUnitID)
     /// ストーリーのライフ復活
     let lifeRefill = RewardedAdManager(unitID: AdConfig.lifeRefillRewardedUnitID)
+    /// ガチャを1回無料で回す
+    let gacha = RewardedAdManager(unitID: AdConfig.gachaRewardedUnitID)
 
     func start() {
         MobileAds.shared.start(completionHandler: nil)
         continuation.load()
         lifeRefill.load()
+        gacha.load()
     }
 }
 

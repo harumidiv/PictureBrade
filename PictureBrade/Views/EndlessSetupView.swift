@@ -11,6 +11,8 @@ struct EndlessSetupView: View {
     @Environment(BladeStore.self) private var store
     @Environment(EnemyCatalog.self) private var enemies
     @Environment(GameCenterManager.self) private var gameCenter
+    @Environment(CosmeticStore.self) private var cosmetics
+    @Environment(PartsStore.self) private var parts
     @Environment(\.dismiss) private var dismiss
 
     @State private var playerBlade: Blade?
@@ -70,16 +72,32 @@ struct EndlessSetupView: View {
             Label("最高記録 \(enemies.bestStreak)連勝", systemImage: "trophy.fill")
                 .font(.headline)
                 .foregroundStyle(Theme.gold)
-            Button {
-                gameCenter.showEndlessLeaderboard()
-            } label: {
-                Label(gameCenter.isAuthenticated ? "Game Center ランキング" : "Game Center にサインインするとランキングに参加できます",
-                      systemImage: "list.number")
+            if gameCenter.isAuthenticated {
+                HStack(spacing: 10) {
+                    Button {
+                        gameCenter.showEndlessLeaderboard()
+                    } label: {
+                        Label("ランキング", systemImage: "list.number")
+                            .font(.subheadline)
+                    }
+                    Button {
+                        gameCenter.showAchievements()
+                    } label: {
+                        Label("実績", systemImage: "rosette")
+                            .font(.subheadline)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                Text("5・10・20・50・100連勝で Game Center の実績を解除！")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            } else {
+                Label("Game Center にサインインすると、ランキングと実績に参加できます", systemImage: "list.number")
                     .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(.bordered)
-            .tint(.white)
-            .disabled(!gameCenter.isAuthenticated)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
@@ -91,9 +109,12 @@ struct EndlessSetupView: View {
         guard let playerBlade, let playerImage = store.image(for: playerBlade) else { return }
         let opponent = enemies.randomEnemy(level: 1)
         battle = BattleGame(
-            player: playerBlade, playerImage: playerImage,
+            player: parts.equipped(playerBlade), playerImage: playerImage,
             cpu: enemies.blade(for: opponent), cpuImage: enemies.image(for: opponent),
-            cpuSkill: opponent.skill, mode: .endless
+            cpuSkill: opponent.skill, mode: .endless,
+            loadout: cosmetics.validatedLoadout(for: playerBlade, enemies: enemies),
+            playerAura: enemies.aura(for: playerBlade),
+            playerEquipment: parts.equipment(for: playerBlade)
         )
     }
 }

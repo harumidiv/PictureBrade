@@ -218,7 +218,7 @@ struct StoryMapView: View {
             .overlay(Circle().stroke(Theme.gold, lineWidth: isSelected ? 4 : 0).padding(-6))
             .shadow(color: Theme.gold.opacity(0.6), radius: 12)
             .overlay(alignment: .bottom) {
-                Text(cleared ? "エンディング" : "ゴール")
+                Text(cleared ? String(localized: "エンディング") : String(localized: "ゴール"))
                     .font(.system(size: 12, weight: .heavy, design: .rounded))
                     .fixedSize()
                     .foregroundStyle(.white)
@@ -290,7 +290,7 @@ private struct StageNode: View {
                     Circle().fill(.white)
                     Circle().strokeBorder(accent, lineWidth: 4)
                     Text(enemy.character)
-                        .font(.system(size: size * 0.5, weight: .black, design: .rounded))
+                        .font(.glyph(size: size * 0.5))
                         .foregroundStyle(Color(enemy.color))
                 case .next:
                     Circle().fill(Color(red: 0.9, green: 0.16, blue: 0.2))

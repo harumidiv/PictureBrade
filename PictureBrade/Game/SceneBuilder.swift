@@ -3,6 +3,7 @@
 //  PictureBrade
 //
 
+import Metal
 import RealityKit
 import UIKit
 
@@ -143,25 +144,32 @@ enum SceneBuilder {
 
     // MARK: - Blade
 
-    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float) async -> BladeModel {
+    /// skin はストーリーの報酬で手に入る見た目の加工（自分のコマにだけ使う）。
+    /// equipment はガチャで手に入れたボディ（色とトゲ）とシャフト（先端の形）
+    static func makeBlade(image: UIImage, tint: RGBColor, radius: Float, skin: BladeSkin = .normal, equipment: Equipment = Equipment()) async -> BladeModel {
         let root = Entity()
         let spinner = Entity()
         root.addChild(spinner)
         let tipHeight: Float = 0.06
 
-        // 軸（先端）
-        var tipMaterial = PhysicallyBasedMaterial()
-        tipMaterial.baseColor = .init(tint: UIColor(white: 0.9, alpha: 1))
-        tipMaterial.metallic = 1.0
-        tipMaterial.roughness = 0.2
-        let tip = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [tipMaterial])
-        tip.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
-        tip.position.y = -tipHeight / 2
-        spinner.addChild(tip)
+        // シャフト（軸の先端）。どの形でも先端が床（-tipHeight）に届くようにする
+        var metalMaterial = PhysicallyBasedMaterial()
+        metalMaterial.baseColor = .init(tint: UIColor(white: 0.9, alpha: 1))
+        metalMaterial.metallic = 1.0
+        metalMaterial.roughness = 0.2
+        let shaft = equipment.shaft
+        var shaftMaterial = metalMaterial
+        if !shaft.isStandard {
+            shaftMaterial.baseColor = .init(tint: shaft.color.uiColor)
+            shaftMaterial.metallic = 0.6
+            shaftMaterial.roughness = 0.3
+        }
+        spinner.addChild(makeShaft(shaft.tip, size: shaft.tipSize, radius: radius, tipHeight: tipHeight, material: shaftMaterial))
 
-        // 土台のディスク（画像の平均色）
+        // ボディ（基本のボディは画像の平均色。ガチャのボディはその色になり、トゲが付く）
+        let body = equipment.body
         var discMaterial = PhysicallyBasedMaterial()
-        discMaterial.baseColor = .init(tint: tint.uiColor)
+        discMaterial.baseColor = .init(tint: body.isStandard ? tint.uiColor : body.color.uiColor)
         discMaterial.metallic = 0.7
         discMaterial.roughness = 0.3
         let disc = ModelEntity(mesh: .generateCylinder(height: 0.02, radius: radius * 0.35), materials: [discMaterial])
@@ -169,19 +177,30 @@ enum SceneBuilder {
         spinner.addChild(disc)
 
         // メタルのリング
-        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.42), materials: [tipMaterial])
+        let ring = ModelEntity(mesh: .generateCylinder(height: 0.012, radius: radius * 0.42), materials: [metalMaterial])
         ring.position.y = 0.004
         spinner.addChild(ring)
+
+        // ボディのトゲ（顔の画像に隠れないよう、画像のふちの外まで伸ばす）
+        if body.fins > 0 {
+            let finLength = radius * 0.75 * body.finLength
+            let finMesh = MeshResource.generateBox(width: finLength, height: 0.016, depth: radius * 0.18 * body.finWidth, cornerRadius: 0.005)
+            for index in 0..<body.fins {
+                let angle = Float(index) / Float(body.fins) * 2 * .pi
+                let fin = ModelEntity(mesh: finMesh, materials: [discMaterial])
+                let distance = radius * 0.4 + finLength * 0.5
+                fin.position = [cos(angle) * distance, 0.008, sin(angle) * distance]
+                // 少しななめに付けて、回ったときに刃っぽく見せる
+                fin.orientation = simd_quatf(angle: -angle + 0.35, axis: [0, 1, 0])
+                spinner.addChild(fin)
+            }
+        }
 
         // 切り抜き画像（これがコマの「顔」）
         if let cgImage = image.cgImage,
            let texture = try? await TextureResource(image: cgImage, options: .init(semantic: .color)) {
-            var imageMaterial = UnlitMaterial()
-            imageMaterial.color = .init(tint: .white, texture: .init(texture))
-            imageMaterial.opacityThreshold = 0.1
-            imageMaterial.faceCulling = .none
             let size = radius * 2.5
-            let face = ModelEntity(mesh: .generatePlane(width: size, height: size), materials: [imageMaterial])
+            let face = ModelEntity(mesh: .generatePlane(width: size, height: size), materials: [faceMaterial(texture: texture, skin: skin)])
             face.orientation = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
             face.position.y = 0.024
             spinner.addChild(face)
@@ -189,6 +208,69 @@ enum SceneBuilder {
 
         return BladeModel(root: root, spinner: spinner, tipHeight: tipHeight)
     }
+
+    /// シャフトの先端の形ごとのモデル。y = 0 がボディの底、y = -tipHeight が床に触れる点
+    /// size は先端の太さ・大きさの倍率（高さは変えない）
+    private static func makeShaft(_ tip: ShaftTip, size: Float, radius: Float, tipHeight: Float, material: PhysicallyBasedMaterial) -> Entity {
+        let shaft = Entity()
+        let radius = radius * size
+        switch tip {
+        case .sharp:
+            let cone = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.16), materials: [material])
+            cone.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
+            cone.position.y = -tipHeight / 2
+            shaft.addChild(cone)
+        case .needle:
+            let cone = ModelEntity(mesh: .generateCone(height: tipHeight, radius: radius * 0.08), materials: [material])
+            cone.orientation = simd_quatf(angle: .pi, axis: [1, 0, 0])
+            cone.position.y = -tipHeight / 2
+            shaft.addChild(cone)
+        case .flat:
+            let body = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.6, radius: radius * 0.1), materials: [material])
+            body.position.y = -tipHeight * 0.3
+            let foot = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.4, radius: radius * 0.17), materials: [material])
+            foot.position.y = -tipHeight * 0.8
+            shaft.addChild(body)
+            shaft.addChild(foot)
+        case .wide:
+            let body = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.65, radius: radius * 0.09), materials: [material])
+            body.position.y = -tipHeight * 0.33
+            let foot = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.3, radius: radius * 0.26), materials: [material])
+            foot.position.y = -tipHeight * 0.85
+            shaft.addChild(body)
+            shaft.addChild(foot)
+        case .ball:
+            // 大きくしても先端が床に届き、ボディにめりこみすぎないようにする
+            let ballRadius = tipHeight * min(0.5, 0.45 * size)
+            let neck = ModelEntity(mesh: .generateCylinder(height: tipHeight * 0.4, radius: radius * 0.08), materials: [material])
+            neck.position.y = -tipHeight * 0.2
+            let ball = ModelEntity(mesh: .generateSphere(radius: ballRadius), materials: [material])
+            ball.position.y = -tipHeight + ballRadius
+            shaft.addChild(neck)
+            shaft.addChild(ball)
+        }
+        return shaft
+    }
+
+    /// コマの顔の材質。見た目の加工があれば Metal のシェーダーで描き、使えない環境ではそのままの画像にする
+    private static func faceMaterial(texture: TextureResource, skin: BladeSkin) -> any RealityKit.Material {
+        if let shaderName = skin.shaderFunctionName, let library = shaderLibrary {
+            let shader = CustomMaterial.SurfaceShader(named: shaderName, in: library)
+            if var material = try? CustomMaterial(surfaceShader: shader, lightingModel: .lit) {
+                material.baseColor = .init(tint: .white, texture: .init(texture))
+                material.opacityThreshold = 0.1
+                material.faceCulling = .none
+                return material
+            }
+        }
+        var material = UnlitMaterial()
+        material.color = .init(tint: .white, texture: .init(texture))
+        material.opacityThreshold = 0.1
+        material.faceCulling = .none
+        return material
+    }
+
+    private static let shaderLibrary: MTLLibrary? = MTLCreateSystemDefaultDevice()?.makeDefaultLibrary()
 
     // MARK: - Effects
 
@@ -211,5 +293,159 @@ enum SceneBuilder {
 
     static func makeSparkStreak() -> ModelEntity {
         ModelEntity(mesh: sparkStreakMesh, materials: [sparkMaterials[0]])
+    }
+
+    // MARK: - Glyph effects
+
+    /// ハートやひらがななど、火花の代わりに飛び散る文字1つぶんの板（いつもカメラのほうを向けて使う）
+    static let glyphMesh = MeshResource.generatePlane(width: 0.1, height: 0.1)
+
+    /// エフェクトの文字を1つずつ画像にして材質にする（同じエフェクトは2回目から使い回す）
+    @MainActor
+    static func glyphMaterials(for effect: HitEffect) async -> [UnlitMaterial] {
+        if let cached = glyphMaterialCache[effect] { return cached }
+        let colors: [UIColor] = [.systemPink, .systemOrange, .systemYellow, .systemGreen, .systemTeal, .systemBlue, .systemPurple, .systemRed]
+        var materials: [UnlitMaterial] = []
+        for (index, glyph) in effect.glyphs.enumerated() {
+            let color: UIColor = effect == .kanji ? [.systemRed, .systemOrange, .systemYellow][index % 3] : colors[index % colors.count]
+            guard let cgImage = renderGlyph(glyph, color: effect.isTextGlyph ? color : nil).cgImage,
+                  let texture = try? await TextureResource(image: cgImage, options: .init(semantic: .color)) else { continue }
+            var material = UnlitMaterial()
+            material.color = .init(tint: .white, texture: .init(texture))
+            material.blending = .transparent(opacity: .init(floatLiteral: 1))
+            material.faceCulling = .none
+            materials.append(material)
+        }
+        glyphMaterialCache[effect] = materials
+        return materials
+    }
+
+    @MainActor private static var glyphMaterialCache: [HitEffect: [UnlitMaterial]] = [:]
+
+    /// color が nil なら絵文字としてそのまま描く。文字は白いふちを付けて太く描く
+    static func renderGlyph(_ glyph: String, color: UIColor?) -> UIImage {
+        let side: CGFloat = 128
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
+            var attributes: [NSAttributedString.Key: Any]
+            if let color {
+                attributes = [.font: UIFont.glyphFont(size: 92), .foregroundColor: color, .strokeColor: UIColor.white, .strokeWidth: -5.0]
+            } else {
+                attributes = [.font: UIFont.systemFont(ofSize: 96)]
+            }
+            let string = NSAttributedString(string: glyph, attributes: attributes)
+            let bounds = string.boundingRect(with: CGSize(width: side * 2, height: side * 2), options: [.usesLineFragmentOrigin], context: nil)
+            string.draw(at: CGPoint(x: (side - bounds.width) / 2, y: (side - bounds.height) / 2))
+        }
+    }
+}
+
+// MARK: - Aura
+
+extension SceneBuilder {
+    static let auraName = "aura"
+
+    /// 連勝したコマの足元から立ちのぼるオーラ。コマの root に付ける（回転はしない）
+    static func makeAura(tier: AuraTier, radius: Float, tipHeight: Float) -> Entity? {
+        guard tier != .none else { return nil }
+        let aura = Entity()
+        aura.name = auraName
+        // root の高さは「床 + 軸の長さ」なので、床の位置まで下げる
+        aura.position.y = -tipHeight
+
+        // 足元の光の輪
+        if let cgImage = auraGlowImage.cgImage,
+           let texture = try? TextureResource(image: cgImage, options: .init(semantic: .color)) {
+            var glowMaterial = UnlitMaterial()
+            glowMaterial.color = .init(tint: tier.isRainbow ? .white : tier.uiColor, texture: .init(texture))
+            glowMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.9))
+            glowMaterial.faceCulling = .none
+            let size = radius * 3.2
+            let glow = ModelEntity(mesh: .generatePlane(width: size, depth: size), materials: [glowMaterial])
+            glow.position.y = 0.004
+            aura.addChild(glow)
+        }
+
+        // 立ちのぼる炎（Metal のシェーダーで描く。使えない環境ではうっすら光る筒にする）
+        if let mesh = auraTubeMesh {
+            let flame = ModelEntity(mesh: mesh, materials: [flameMaterial(tier: tier)])
+            flame.scale = [radius * 1.15, tier.flameHeight, radius * 1.15]
+            aura.addChild(flame)
+        }
+        return aura
+    }
+
+    private static func flameMaterial(tier: AuraTier) -> any RealityKit.Material {
+        if let library = MTLCreateSystemDefaultDevice()?.makeDefaultLibrary() {
+            let shader = CustomMaterial.SurfaceShader(named: "bladeAura", in: library)
+            if var material = try? CustomMaterial(surfaceShader: shader, lightingModel: .lit) {
+                material.custom.value = tier.shaderParameter
+                material.blending = .transparent(opacity: .init(floatLiteral: 1))
+                material.faceCulling = .none
+                return material
+            }
+        }
+        var material = UnlitMaterial(color: tier.uiColor)
+        material.blending = .transparent(opacity: .init(floatLiteral: 0.25))
+        material.faceCulling = .none
+        return material
+    }
+
+    /// 半径1・高さ1（y = 0〜1）のふたのない筒
+    private static let auraTubeMesh: MeshResource? = {
+        let segments = 48
+        let rows = 6
+        var positions: [SIMD3<Float>] = []
+        var indices: [UInt32] = []
+        for row in 0...rows {
+            let y = Float(row) / Float(rows)
+            for segment in 0...segments {
+                let angle = Float(segment) / Float(segments) * 2 * .pi
+                positions.append([cos(angle), y, sin(angle)])
+            }
+        }
+        let stride = UInt32(segments + 1)
+        for row in 0..<UInt32(rows) {
+            for segment in 0..<UInt32(segments) {
+                let a = row * stride + segment
+                let b = a + 1
+                let c = a + stride
+                let d = c + 1
+                indices += [a, c, b, b, c, d]
+            }
+        }
+        var descriptor = MeshDescriptor(name: "auraTube")
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(positions.map { simd_normalize(SIMD3($0.x, 0, $0.z)) })
+        descriptor.primitives = .triangles(indices)
+        return try? MeshResource.generate(from: [descriptor])
+    }()
+
+    /// 中心が明るく、外に向かって消えていく白い円（色は材質の tint で付ける）
+    private static let auraGlowImage: UIImage = {
+        let side: CGFloat = 256
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let colors = [UIColor.white.withAlphaComponent(0.9).cgColor, UIColor.white.withAlphaComponent(0.35).cgColor, UIColor.white.withAlphaComponent(0).cgColor]
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0, 0.45, 1]) else { return }
+            let center = CGPoint(x: side / 2, y: side / 2)
+            context.cgContext.drawRadialGradient(gradient, startCenter: center, startRadius: 0, endCenter: center, endRadius: side / 2, options: [])
+        }
+    }()
+}
+
+extension BladeSkin {
+    /// BladeSkinShaders.metal の関数名
+    var shaderFunctionName: String? {
+        switch self {
+        case .normal: nil
+        case .gold: "bladeSkinGold"
+        case .neon: "bladeSkinNeon"
+        case .rainbow: "bladeSkinRainbow"
+        case .pixel: "bladeSkinPixel"
+        case .hologram: "bladeSkinHologram"
+        }
     }
 }

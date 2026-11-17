@@ -40,18 +40,21 @@ enum SceneBuilder {
         // 同心円のライン
         var lineMaterial = UnlitMaterial(color: UIColor(red: 0.35, green: 0.75, blue: 1, alpha: 1))
         lineMaterial.faceCulling = .none
+        // 細かい箱を並べて円にしているが、1つずつ別の部品にすると描画が重くなるので1つの形にまとめる
+        var lineBoxes = BoxBatch()
         for ringRadius: Float in [0.35, 0.7] {
             let segments = 72
             for i in 0..<segments {
                 let angle = Float(i) / Float(segments) * 2 * .pi
-                let segment = ModelEntity(
-                    mesh: .generateBox(width: 0.02, height: 0.01, depth: ringRadius * 2 * .pi / Float(segments) * 1.05),
-                    materials: [lineMaterial]
+                lineBoxes.append(
+                    size: [0.02, 0.01, ringRadius * 2 * .pi / Float(segments) * 1.05],
+                    position: [cos(angle) * ringRadius, StadiumGeometry.height(at: ringRadius) + 0.006, sin(angle) * ringRadius],
+                    rotation: simd_quatf(angle: -angle, axis: [0, 1, 0])
                 )
-                segment.position = [cos(angle) * ringRadius, StadiumGeometry.height(at: ringRadius) + 0.006, sin(angle) * ringRadius]
-                segment.orientation = simd_quatf(angle: -angle, axis: [0, 1, 0])
-                stadium.addChild(segment)
             }
+        }
+        if let mesh = try? lineBoxes.makeMesh(name: "ringLines") {
+            stadium.addChild(ModelEntity(mesh: mesh, materials: [lineMaterial]))
         }
 
         // 外周のレール（ポケット部分は空ける）
@@ -68,19 +71,29 @@ enum SceneBuilder {
         let rim = Entity()
         rim.name = pocketRimName
         stadium.addChild(rim)
+        // レールとポケットも、材質ごとに1つの形にまとめる
+        var railBoxes = BoxBatch()
+        var pocketBoxes = BoxBatch()
         for i in 0..<segments {
             let angle = Float(i) / Float(segments) * 2 * .pi
             let point = SIMD2<Float>(cos(angle), sin(angle))
             let inPocket = StadiumGeometry.isInPocket(point)
             // 台座の底(baseBottom)から立ち上がる外壁。ポケット部分はすり鉢の縁の高さまで
             let top = inPocket ? rimHeight + 0.005 : rimHeight + 0.09
-            let segment = ModelEntity(
-                mesh: .generateBox(width: 0.06, height: top - baseBottom, depth: rimRadius * 2 * .pi / Float(segments) * 1.02),
-                materials: [inPocket ? pocketMaterial : railMaterial]
-            )
-            segment.position = [point.x * rimRadius, (top + baseBottom) / 2, point.y * rimRadius]
-            segment.orientation = simd_quatf(angle: -angle, axis: [0, 1, 0])
-            rim.addChild(segment)
+            let size: SIMD3<Float> = [0.06, top - baseBottom, rimRadius * 2 * .pi / Float(segments) * 1.02]
+            let position: SIMD3<Float> = [point.x * rimRadius, (top + baseBottom) / 2, point.y * rimRadius]
+            let rotation = simd_quatf(angle: -angle, axis: [0, 1, 0])
+            if inPocket {
+                pocketBoxes.append(size: size, position: position, rotation: rotation)
+            } else {
+                railBoxes.append(size: size, position: position, rotation: rotation)
+            }
+        }
+        if let mesh = try? railBoxes.makeMesh(name: "rail") {
+            rim.addChild(ModelEntity(mesh: mesh, materials: [railMaterial]))
+        }
+        if let mesh = try? pocketBoxes.makeMesh(name: "pocket") {
+            rim.addChild(ModelEntity(mesh: mesh, materials: [pocketMaterial]))
         }
 
         // 台座と床
@@ -276,9 +289,12 @@ enum SceneBuilder {
 
     /// ぶつかった瞬間の閃光
     static func makeSpark() -> ModelEntity {
-        let material = UnlitMaterial(color: UIColor(red: 1, green: 0.95, blue: 0.7, alpha: 1))
-        return ModelEntity(mesh: .generateSphere(radius: 0.05), materials: [material])
+        ModelEntity(mesh: sparkMesh, materials: [sparkMaterial])
     }
+
+    /// 閃光の形と色（ぶつかるたびに作り直すと重いので使い回す）
+    private static let sparkMesh = MeshResource.generateSphere(radius: 0.05)
+    private static let sparkMaterial = UnlitMaterial(color: UIColor(red: 1, green: 0.95, blue: 0.7, alpha: 1))
 
     /// 火花1本ぶんの細長い棒（-Z 方向に伸びる。飛ぶ向きに向けて使う）
     private static let sparkStreakMesh = MeshResource.generateBox(size: [0.014, 0.014, 0.07])
@@ -447,5 +463,48 @@ extension BladeSkin {
         case .pixel: "bladeSkinPixel"
         case .hologram: "bladeSkinHologram"
         }
+    }
+}
+
+// MARK: - Box batch
+
+/// たくさんの箱を1つのメッシュにまとめる（部品の数を減らして描画を軽くする）。
+/// MeshResource.generateBox と同じ大きさ・向きの箱を、position と rotation で置いた形になる
+struct BoxBatch {
+    private var positions: [SIMD3<Float>] = []
+    private var normals: [SIMD3<Float>] = []
+    private var indices: [UInt32] = []
+
+    /// 面の向き n と、面上の2軸 u, v（u × v = n なので、外から見て反時計回り）
+    private static let faces: [(n: SIMD3<Float>, u: SIMD3<Float>, v: SIMD3<Float>)] = [
+        ([1, 0, 0], [0, 1, 0], [0, 0, 1]),
+        ([-1, 0, 0], [0, 0, 1], [0, 1, 0]),
+        ([0, 1, 0], [0, 0, 1], [1, 0, 0]),
+        ([0, -1, 0], [1, 0, 0], [0, 0, 1]),
+        ([0, 0, 1], [1, 0, 0], [0, 1, 0]),
+        ([0, 0, -1], [0, 1, 0], [1, 0, 0]),
+    ]
+
+    mutating func append(size: SIMD3<Float>, position: SIMD3<Float>, rotation: simd_quatf) {
+        let half = size / 2
+        for face in Self.faces {
+            let base = UInt32(positions.count)
+            let center = face.n * simd_dot(simd_abs(face.n), half)
+            let u = face.u * simd_dot(face.u, half)
+            let v = face.v * simd_dot(face.v, half)
+            for corner in [center - u - v, center + u - v, center + u + v, center - u + v] {
+                positions.append(rotation.act(corner) + position)
+                normals.append(rotation.act(face.n))
+            }
+            indices += [base, base + 1, base + 2, base, base + 2, base + 3]
+        }
+    }
+
+    func makeMesh(name: String) throws -> MeshResource {
+        var descriptor = MeshDescriptor(name: name)
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(normals)
+        descriptor.primitives = .triangles(indices)
+        return try MeshResource.generate(from: [descriptor])
     }
 }

@@ -135,6 +135,10 @@ final class BattleGame {
     }
 
     @ObservationIgnored private var glyphParticles: [GlyphParticle] = []
+    /// 閃光・火花・文字の部品は、ぶつかるたびに作ると重いので、使い終わったら隠して使い回す
+    @ObservationIgnored private var freeSparks: [ModelEntity] = []
+    @ObservationIgnored private var freeSparkStreaks: [ModelEntity] = []
+    @ObservationIgnored private var freeGlyphs: [ModelEntity] = []
     @ObservationIgnored private var glyphMaterials: [UnlitMaterial] = []
     private static let maxGlyphParticles = 80
     @ObservationIgnored private var accumulator: Float = 0
@@ -235,6 +239,7 @@ final class BattleGame {
         if loadout.effect != .sparks {
             glyphMaterials = await SceneBuilder.glyphMaterials(for: loadout.effect)
         }
+        prepareEffectPools()
 
         updateSubscription = content.subscribe(to: SceneEvents.Update.self) { [weak self] event in
             self?.update(dt: Float(event.deltaTime))
@@ -510,12 +515,48 @@ final class BattleGame {
         }
     }
 
+    // MARK: - Effect pools
+
+    /// 試合が始まる前に、エフェクトの部品を上限の数だけ作っておく
+    private func prepareEffectPools() {
+        freeSparks = (0..<16).map { _ in hiddenEffect(SceneBuilder.makeSpark()) }
+        if glyphMaterials.isEmpty {
+            freeSparkStreaks = (0..<Self.maxSparkStreaks).map { _ in hiddenEffect(SceneBuilder.makeSparkStreak()) }
+        } else {
+            freeGlyphs = (0..<Self.maxGlyphParticles).map { _ in
+                hiddenEffect(ModelEntity(mesh: SceneBuilder.glyphMesh, materials: [glyphMaterials[0]]))
+            }
+        }
+    }
+
+    private func hiddenEffect(_ entity: ModelEntity) -> ModelEntity {
+        entity.isEnabled = false
+        worldRoot.addChild(entity)
+        return entity
+    }
+
+    /// 使い回しの部品を、新しく作ったときと同じ状態にして出す（足りなければ作る）
+    private func takeEffect(from pool: inout [ModelEntity], make: () -> ModelEntity) -> ModelEntity {
+        let entity = pool.popLast() ?? {
+            let made = make()
+            worldRoot.addChild(made)
+            return made
+        }()
+        entity.transform = Transform()
+        entity.isEnabled = true
+        return entity
+    }
+
+    private func recycle(_ entity: ModelEntity, into pool: inout [ModelEntity]) {
+        entity.isEnabled = false
+        pool.append(entity)
+    }
+
     private func handleCollision(_ event: CollisionEvent) {
-        let spark = SceneBuilder.makeSpark()
+        let spark = takeEffect(from: &freeSparks, make: SceneBuilder.makeSpark)
         let y = StadiumGeometry.height(at: simd_length(event.point)) + 0.05
         spark.position = [event.point.x, y, event.point.y]
         spark.scale = .init(repeating: 0.2 + min(event.strength, 3) * 0.4)
-        worldRoot.addChild(spark)
         sparks.append((spark, 0))
 
         if glyphMaterials.isEmpty {
@@ -543,9 +584,9 @@ final class BattleGame {
             let elevation = Float.random(in: 0.1...1.1)
             let direction = SIMD3<Float>(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
             let speed = Float.random(in: 0.6...1.6) * (0.8 + 0.5 * power)
-            let entity = SceneBuilder.makeSparkStreak()
+            let entity = takeEffect(from: &freeSparkStreaks, make: SceneBuilder.makeSparkStreak)
+            entity.model?.materials = [SceneBuilder.sparkMaterials[0]]
             entity.position = point
-            worldRoot.addChild(entity)
             sparkStreaks.append(SparkStreak(entity: entity, velocity: direction * speed, life: .random(in: 0.25...0.55)))
         }
     }
@@ -557,7 +598,7 @@ final class BattleGame {
             streak.age += dt
             let floor = StadiumGeometry.height(at: simd_length(SIMD2(streak.entity.position.x, streak.entity.position.z)))
             if streak.age > streak.life || streak.entity.position.y < floor - 0.02 {
-                streak.entity.removeFromParent()
+                recycle(streak.entity, into: &freeSparkStreaks)
                 sparkStreaks.remove(at: index)
                 continue
             }
@@ -594,10 +635,11 @@ final class BattleGame {
             let elevation = Float.random(in: 0.5...1.3)
             let direction = SIMD3<Float>(cos(angle) * cos(elevation), sin(elevation), sin(angle) * cos(elevation))
             let speed = Float.random(in: 0.5...1.1) * (0.8 + 0.3 * power)
-            let entity = ModelEntity(mesh: SceneBuilder.glyphMesh, materials: [glyphMaterials.randomElement()!])
+            let material = glyphMaterials.randomElement()!
+            let entity = takeEffect(from: &freeGlyphs) { ModelEntity(mesh: SceneBuilder.glyphMesh, materials: [material]) }
+            entity.model?.materials = [material]
             entity.position = point
             entity.scale = .zero
-            worldRoot.addChild(entity)
             glyphParticles.append(GlyphParticle(
                 entity: entity,
                 velocity: direction * speed,
@@ -617,7 +659,7 @@ final class BattleGame {
             var particle = glyphParticles[index]
             particle.age += dt
             if particle.age > particle.life {
-                particle.entity.removeFromParent()
+                recycle(particle.entity, into: &freeGlyphs)
                 glyphParticles.remove(at: index)
                 continue
             }
@@ -645,7 +687,7 @@ final class BattleGame {
             sparks[index].age += dt
             let entity = sparks[index].entity
             if sparks[index].age > 0.12 {
-                entity.removeFromParent()
+                recycle(entity, into: &freeSparks)
                 sparks.remove(at: index)
             } else {
                 entity.scale *= 1 + dt * 8

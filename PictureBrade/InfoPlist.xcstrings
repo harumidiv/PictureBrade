@@ -211,6 +211,204 @@
         }
       }
     },
+    "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ca" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La càmera s’utilitza per fer una foto per a la teva baldufa."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fotoaparát slouží k pořízení fotografie pro tvou káču."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kameraet bruges til at tage et billede til din snurretop."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Die Kamera wird verwendet, um ein Foto für deinen Kreisel aufzunehmen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Η κάμερα χρησιμοποιείται για να τραβήξεις μια φωτογραφία για τη σβούρα σου."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "The camera is used to take a photo for your spinning top."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La cámara se usa para tomar una foto para tu peonza."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kameraa käytetään kuvan ottamiseen hyrrääsi varten."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "L’appareil photo sert à prendre une photo pour ta toupie."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "आपके लट्टू के लिए फ़ोटो लेने में कैमरे का इस्तेमाल होता है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kamera se koristi za snimanje fotografije za tvoju čigru."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A kamerával fényképet készíthetsz a pörgettyűdhöz."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kamera digunakan untuk mengambil foto untuk gasingmu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La fotocamera serve a scattare una foto per la tua trottola."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "コマに使う写真を撮影するためにカメラを使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "팽이에 사용할 사진을 찍기 위해 카메라를 사용합니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kamera digunakan untuk mengambil foto bagi gasing anda."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kameraet brukes til å ta et bilde til snurrebassen din."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De camera wordt gebruikt om een foto te maken voor je tol."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aparat służy do zrobienia zdjęcia dla twojego bączka."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A câmera é usada para tirar uma foto para o seu pião."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A câmara é utilizada para tirar uma fotografia para o teu pião."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Camera este folosită pentru a face o fotografie pentru titirezul tău."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Камера используется для съёмки фотографии для твоего волчка."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fotoaparát slúži na zhotovenie fotografie pre tvojho vĺčika."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kameran används för att ta ett foto till din snurra."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ใช้กล้องเพื่อถ่ายรูปสำหรับลูกข่างของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kamera, topacın için bir fotoğraf çekmek üzere kullanılır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Камера використовується, щоб зробити фото для твоєї дзиґи."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Máy ảnh được dùng để chụp ảnh cho con quay của bạn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相机用于拍摄制作陀螺所需的照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "相機用於拍攝製作陀螺所需的照片。"
+          }
+        }
+      }
+    },
     "NSUserTrackingUsageDescription" : {
       "comment" : "Privacy - Tracking Usage Description",
       "extractionState" : "extracted_with_value",

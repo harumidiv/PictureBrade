@@ -3,6 +3,7 @@
 //  PictureBrade
 //
 
+import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -11,8 +12,11 @@ import UIKit
 struct AddBladeView: View {
     @Environment(BladeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     @State private var photoItem: PhotosPickerItem?
+    @State private var isShowingCamera = false
+    @State private var capturedImage: UIImage?
     @State private var preview: UIImage?
     @State private var isRoughCut = false
     @State private var name = ""
@@ -39,7 +43,6 @@ struct AddBladeView: View {
                     }
                     sources
                     StatGuideView()
-                    howTo
                 }
                 .padding()
             }
@@ -78,6 +81,13 @@ struct AddBladeView: View {
                 Task { await process(image) }
                 return true
             }
+        }
+        .fullScreenCover(isPresented: $isShowingCamera, onDismiss: processCapturedImage) {
+            BladeCameraPicker { image in
+                capturedImage = image
+                isShowingCamera = false
+            }
+            .ignoresSafeArea()
         }
     }
 
@@ -130,13 +140,14 @@ struct AddBladeView: View {
     private var sources: some View {
         VStack(spacing: 12) {
             Button {
-                Task { await process(UIPasteboard.general.image) }
+                Task { await openCamera() }
             } label: {
-                Label("コピーした切り抜きを貼り付け", systemImage: "doc.on.clipboard")
+                Label("カメラで撮影", systemImage: "camera")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent)
+            .disabled(isProcessing || photoItem != nil)
 
             PhotosPicker(selection: $photoItem, matching: .images) {
                 Label("写真から自動で切り抜く", systemImage: "photo.on.rectangle")
@@ -159,17 +170,32 @@ struct AddBladeView: View {
         .controlSize(.large)
     }
 
-    private var howTo: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("iOSの切り抜き機能の使い方")
-                .font(.headline)
-            Text("1. 写真アプリで被写体を長押し\n2. 「コピー」を選ぶ（またはそのままこの画面にドラッグ）\n3. 「コピーした切り抜きを貼り付け」をタップ")
-                .font(.footnote)
+    private func openCamera() async {
+        let authorization = AVCaptureDevice.authorizationStatus(for: .video)
+        if authorization == .denied, let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+            openURL(settingsURL)
+            return
         }
-        .foregroundStyle(.white.opacity(0.85))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.06)))
+
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            errorMessage = String(localized: "カメラを使用できません。")
+            return
+        }
+
+        switch authorization {
+        case .authorized:
+            isShowingCamera = true
+        case .notDetermined:
+            isShowingCamera = await AVCaptureDevice.requestAccess(for: .video)
+        default:
+            errorMessage = String(localized: "カメラを使用できません。")
+        }
+    }
+
+    private func processCapturedImage() {
+        guard let capturedImage else { return }
+        self.capturedImage = nil
+        Task { await process(capturedImage) }
     }
 
     private func process(pexels photo: PexelsPhoto) async {
@@ -199,6 +225,42 @@ struct AddBladeView: View {
             isRoughCut = prepared.isRoughCut
         } catch {
             errorMessage = String(localized: "画像を処理できませんでした")
+        }
+    }
+}
+
+private struct BladeCameraPicker: UIViewControllerRepresentable {
+    let onFinish: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onFinish: onFinish)
+    }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        private let onFinish: (UIImage?) -> Void
+
+        init(onFinish: @escaping (UIImage?) -> Void) {
+            self.onFinish = onFinish
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            onFinish(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onFinish(nil)
         }
     }
 }

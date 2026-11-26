@@ -5369,196 +5369,6 @@
         }
       }
     },
-    "1. 写真アプリで被写体を長押し\n2. 「コピー」を選ぶ（またはそのままこの画面にドラッグ）\n3. 「コピーした切り抜きを貼り付け」をタップ" : {
-      "localizations" : {
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. A l'app Fotos, mantén premut el subjecte\n2. Tria «Copiar» (o arrossega'l directament aquí)\n3. Toca «Enganxar el retall copiat»"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. V aplikaci Fotky podrž prst na objektu\n2. Vyber „Kopírovat“ (nebo ho rovnou přetáhni na tuto obrazovku)\n3. Klepni na „Vložit zkopírovaný výřez“"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Hold fingeren på motivet i Fotos-appen\n2. Vælg ”Kopiér” (eller træk det direkte hertil)\n3. Tryk på ”Sæt kopieret udsnit ind”"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. In der Fotos-App das Motiv lange drücken\n2. „Kopieren“ wählen (oder direkt hierher ziehen)\n3. Auf „Kopiertes Motiv einfügen“ tippen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Στις Φωτογραφίες, πάτα παρατεταμένα το θέμα\n2. Διάλεξε «Αντιγραφή» (ή σύρε το κατευθείαν σε αυτή την οθόνη)\n3. Πάτα «Επικόλληση αντιγραμμένου αποκόμματος»"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Long-press the subject in the Photos app\n2. Choose \"Copy\" (or drag it straight onto this screen)\n3. Tap \"Paste Copied Cutout\""
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. En la app Fotos, mantén pulsado el sujeto\n2. Elige “Copiar” (o arrástralo directamente a esta pantalla)\n3. Toca “Pegar recorte copiado”"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Pidä sormea kohteen päällä Kuvat-apissa\n2. Valitse ”Kopioi” (tai vedä se suoraan tähän)\n3. Napauta ”Liitä kopioitu leike”"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Dans l'app Photos, appuie longuement sur le sujet\n2. Choisis « Copier » (ou fais-le glisser directement ici)\n3. Touche « Coller le détourage copié »"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Photos ऐप में किसी चीज़ को देर तक दबाओ\n2. “कॉपी करें” चुनो (या सीधे इस स्क्रीन पर खींच लाओ)\n3. “कॉपी किया कटआउट पेस्ट करो” पर टैप करो"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. U aplikaciji Fotografije dugo pritisni motiv\n2. Odaberi „Kopiraj“ (ili ga odmah povuci na ovaj zaslon)\n3. Dodirni „Zalijepi kopirani izrezak“"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. A Fotók appban tartsd lenyomva a témát\n2. Válaszd a „Másolás”-t (vagy húzd ide egyenesen)\n3. Koppints a „Kivágott kép beillesztése” gombra"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Tekan lama objek di app Foto\n2. Pilih “Salin” (atau seret langsung ke layar ini)\n3. Ketuk “Tempel potongan yang disalin”"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Nell'app Foto, tieni premuto sul soggetto\n2. Scegli «Copia» (o trascinalo direttamente qui)\n3. Tocca «Incolla il ritaglio copiato»"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. 사진 앱에서 피사체를 길게 누르기\n2. “복사”를 선택 (또는 그대로 이 화면으로 드래그)\n3. “복사한 피사체 붙여넣기”를 탭"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Tekan lama subjek dalam app Foto\n2. Pilih “Salin” (atau seret terus ke skrin ini)\n3. Ketik “Tampal potongan yang disalin”"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Hold fingeren på motivet i Bilder-appen\n2. Velg «Kopier» (eller dra det rett hit)\n3. Trykk på «Lim inn kopiert utklipp»"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Houd in de Foto's-app het onderwerp ingedrukt\n2. Kies “Kopieer” (of sleep het meteen naar dit scherm)\n3. Tik op “Gekopieerde uitsnede plakken”"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. W aplikacji Zdjęcia przytrzymaj obiekt\n2. Wybierz „Kopiuj” (albo przeciągnij go prosto na ten ekran)\n3. Stuknij „Wklej skopiowany wycinek”"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. No app Fotos, toque e segure o objeto\n2. Escolha “Copiar” (ou arraste direto para esta tela)\n3. Toque em “Colar recorte copiado”"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Na app Fotografias, mantém premido o motivo\n2. Escolhe «Copiar» (ou arrasta-o diretamente para este ecrã)\n3. Toca em «Colar recorte copiado»"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. În aplicația Poze, ține apăsat pe subiect\n2. Alege „Copiază” (sau trage-l direct pe acest ecran)\n3. Atinge „Lipește decupajul copiat”"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. В «Фото» нажми и удерживай объект на снимке\n2. Выбери «Скопировать» (или просто перетащи его на этот экран)\n3. Нажми «Вставить скопированный вырез»"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. V aplikácii Fotky podrž prst na objekte\n2. Vyber „Kopírovať“ (alebo ho rovno pretiahni na túto obrazovku)\n3. Ťukni na „Vložiť skopírovaný výrez“"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Håll fingret på motivet i appen Bilder\n2. Välj ”Kopiera” (eller dra det direkt hit)\n3. Tryck på ”Klistra in kopierad utskärning”"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. กดค้างที่วัตถุในแอปรูปภาพ\n2. เลือก “คัดลอก” (หรือลากมาที่หน้าจอนี้เลย)\n3. แตะ “วางภาพตัดที่คัดลอกไว้”"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Fotoğraflar uygulamasında nesneye uzun bas\n2. “Kopyala”yı seç (ya da doğrudan bu ekrana sürükle)\n3. “Kopyalanan kesimi yapıştır”a dokun"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. У «Фото» натисни й утримуй об'єкт\n2. Обери «Скопіювати» (або просто перетягни на цей екран)\n3. Торкнись «Вставити скопійований вирізок»"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. Nhấn giữ chủ thể trong ứng dụng Ảnh\n2. Chọn “Sao chép” (hoặc kéo thẳng vào màn hình này)\n3. Chạm “Dán chủ thể đã sao chép”"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. 在“照片”App中长按主体\n2. 选择“拷贝”（或直接拖到这个画面）\n3. 点击“粘贴已拷贝的抠图”"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1. 在「照片」App中長按主體\n2. 選擇「拷貝」（或直接拖到這個畫面）\n3. 點一下「貼上已拷貝的去背圖」"
-          }
-        }
-      }
-    },
     "10連（SR以上1つ確定）" : {
       "localizations" : {
         "ca" : {
@@ -11451,196 +11261,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VS"
-          }
-        }
-      }
-    },
-    "iOSの切り抜き機能の使い方" : {
-      "localizations" : {
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Com fer servir el retall d'iOS"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jak vyřezávat objekty v iOS"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sådan bruger du iOS' udklipsfunktion"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "So nutzt du die iOS-Freistellen-Funktion"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Πώς να κάνεις αποκοπή θέματος στο iOS"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "How to use iOS cutouts"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cómo usar el recorte de iOS"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Näin käytät iOS:n rajaustoimintoa"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comment utiliser le détourage d'iOS"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS कटआउट फ़ीचर कैसे इस्तेमाल करें"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kako koristiti iOS izrezivanje"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Így használd az iOS kivágás funkcióját"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cara memakai fitur potong objek iOS"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Come usare il ritaglio di iOS"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS 피사체 분리 기능 사용법"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cara guna ciri potong subjek iOS"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slik bruker du utklippsfunksjonen i iOS"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zo gebruik je de uitsnijfunctie van iOS"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jak wycinać obiekty w iOS"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Como usar o recorte do iOS"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Como usar o recorte do iOS"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cum folosești decuparea din iOS"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Как вырезать объект в iOS"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ako vyrezávať objekty v iOS"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Så använder du iOS utskärningsfunktion"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "วิธีใช้ฟีเจอร์ตัดภาพวัตถุของ iOS"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS kesip çıkarma özelliği nasıl kullanılır"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Як вирізати об'єкт в iOS"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cách dùng tính năng tách chủ thể của iOS"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如何使用 iOS 抠图功能"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如何使用 iOS 去背功能"
           }
         }
       }
@@ -50215,6 +49835,386 @@
         }
       }
     },
+    "カメラで撮影" : {
+      "localizations" : {
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fes una foto"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vyfotit"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag et billede"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto aufnehmen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Τράβηξε φωτογραφία"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take a Photo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tomar una foto"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ota kuva"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prendre une photo"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "फ़ोटो लें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snimi fotografiju"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fénykép készítése"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil foto"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scatta una foto"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사진 찍기"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil foto"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta et bilde"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak een foto"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zrób zdjęcie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tirar foto"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tirar uma fotografia"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fă o fotografie"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сделать фото"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odfotiť"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta ett foto"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ถ่ายรูป"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotoğraf çek"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Зробити фото"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chụp ảnh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍照"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拍照"
+          }
+        }
+      }
+    },
+    "カメラを使用できません。" : {
+      "localizations" : {
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No es pot utilitzar la càmera."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotoaparát nelze použít."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kameraet kan ikke bruges."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kamera kann nicht verwendet werden."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η κάμερα δεν μπορεί να χρησιμοποιηθεί."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The camera is unavailable."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se puede usar la cámara."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kameraa ei voi käyttää."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’appareil photo ne peut pas être utilisé."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कैमरे का इस्तेमाल नहीं किया जा सकता।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera se ne može koristiti."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A kamera nem használható."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera tidak dapat digunakan."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non è possibile usare la fotocamera."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카메라를 사용할 수 없습니다."
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera tidak boleh digunakan."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kameraet kan ikke brukes."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De camera kan niet worden gebruikt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie można użyć aparatu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é possível usar a câmera."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é possível utilizar a câmara."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera nu poate fi folosită."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Камера недоступна."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotoaparát sa nedá použiť."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kameran kan inte användas."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ไม่สามารถใช้กล้องได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamera kullanılamıyor."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Камера недоступна."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể sử dụng máy ảnh."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法使用相机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法使用相機。"
+          }
+        }
+      }
+    },
     "ガオォォ！　ジャングルの王、ライオン様だ！　このドットカメラで、キミのコマもカクカクのドット絵にしてやる！" : {
       "localizations" : {
         "ca" : {
@@ -55531,196 +55531,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "硬幣機體"
-          }
-        }
-      }
-    },
-    "コピーした切り抜きを貼り付け" : {
-      "localizations" : {
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enganxar el retall copiat"
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vložit zkopírovaný výřez"
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sæt kopieret udsnit ind"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kopiertes Motiv einfügen"
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Επικόλληση αντιγραμμένου αποκόμματος"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste Copied Cutout"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pegar recorte copiado"
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Liitä kopioitu leike"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coller le détourage copié"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कॉपी किया कटआउट पेस्ट करो"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zalijepi kopirani izrezak"
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kivágott kép beillesztése"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempel potongan yang disalin"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Incolla il ritaglio copiato"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "복사한 피사체 붙여넣기"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tampal potongan yang disalin"
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lim inn kopiert utklipp"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gekopieerde uitsnede plakken"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wklej skopiowany wycinek"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Colar recorte copiado"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Colar recorte copiado"
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lipește decupajul copiat"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вставить скопированный вырез"
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vložiť skopírovaný výrez"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Klistra in kopierad utskärning"
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "วางภาพตัดที่คัดลอกไว้"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kopyalanan kesimi yapıştır"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вставити скопійований вирізок"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dán chủ thể đã sao chép"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "粘贴已拷贝的抠图"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "貼上已拷貝的去背圖"
           }
         }
       }
